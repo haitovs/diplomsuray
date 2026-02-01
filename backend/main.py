@@ -20,6 +20,7 @@ simulation = SimulationEngine()
 # Request models
 class AttackRequest(BaseModel):
     type: str = None
+    sophistication: str = "medium"  # low, medium, high
 
 class ParamsUpdate(BaseModel):
     params: dict
@@ -49,8 +50,8 @@ async def reset_simulation():
 
 @app.post("/control/attack")
 async def set_attack(request: AttackRequest):
-    simulation.set_attack(request.type)
-    return {"status": "attack_set", "type": request.type}
+    simulation.set_attack(request.type, request.sophistication)
+    return {"status": "attack_set", "type": request.type, "sophistication": request.sophistication}
 
 @app.post("/control/params")
 async def update_params(request: ParamsUpdate):

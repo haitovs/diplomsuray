@@ -2,12 +2,7 @@ import random
 import time
 import math
 import networkx as nx
-import asyncio
-from fastapi import FastAPI, WebSocket, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
-from enum import Enum
+from typing import Dict, Any, List
 from dataclasses import dataclass, asdict
 import uuid
 
@@ -479,7 +474,7 @@ class SimulationEngine:
     def _get_path(self, start, end):
         try:
             return nx.shortest_path(self.road_graph, start, end)
-        except:
+        except (nx.NetworkXNoPath, nx.NodeNotFound, nx.NetworkXError):
             return []
 
     def start(self):
@@ -799,6 +794,8 @@ class SimulationEngine:
                             if v["hack_progress"] >= 100:
                                 target["status"] = "stopped"
                                 target["speed"] = 0
+                                target["hack_recovery_timer"] = 50  # Will recover after ~5 seconds
+                                target["anomalies_detected"] = target.get("anomalies_detected", 0) + 1
                                 v["target_vehicle"] = None
                                 v["hack_progress"] = 0
                                 new_anomalies.append({
@@ -819,6 +816,15 @@ class SimulationEngine:
                 v["target_vehicle"] = None
                 v["hack_progress"] = 0
 
+            # Vehicle recovery: hacked vehicles resume after recovery timer expires
+            if v["status"] == "stopped" and not v.get("is_attacker", False):
+                recovery = v.get("hack_recovery_timer", 0)
+                if recovery > 0:
+                    v["hack_recovery_timer"] = recovery - 1
+                    if v["hack_recovery_timer"] <= 0:
+                        v["status"] = "moving"
+                        v["hack_recovery_timer"] = 0
+
             # Movement Logic
             if v["status"] == "moving":
                 self._move_vehicle(v)
@@ -836,9 +842,11 @@ class SimulationEngine:
                     "heading": v["heading"]
                 }
                 messages.append(msg)
+                v["messages_sent"] = v.get("messages_sent", 0) + 1
                 
                 is_anomaly, reason = self._detect_anomaly(msg)
                 if is_anomaly:
+                    v["anomalies_detected"] = v.get("anomalies_detected", 0) + 1
                     new_anomalies.append({
                         "id": f"a_{self.step_count}_{v['id']}",
                         "timestamp": time.time(),
@@ -978,104 +986,22 @@ class SimulationEngine:
     def _detect_anomaly(self, msg):
         is_anomaly = False
         reason = None
+        sensitivity = self.params.get("detection_sensitivity", 0.7)
         
-        if msg["speed"] > 200:
+        # Speed threshold scales with sensitivity (higher sensitivity = lower threshold)
+        speed_threshold = 200 - (sensitivity * 80)  # Range: 144-200 km/h
+        if msg["speed"] > speed_threshold:
             is_anomaly = True
-            reason = f"Impossible speed: {msg['speed']:.0f} km/h"
+            reason = f"Impossible speed: {msg['speed']:.0f} km/h (threshold: {speed_threshold:.0f})"
         
-        if msg["timestamp"] < time.time() - 10:
+        # Timestamp freshness scales with sensitivity
+        time_threshold = 10 - (sensitivity * 6)  # Range: 4-10 seconds
+        if msg["timestamp"] < time.time() - time_threshold:
             is_anomaly = True
-            reason = "Replayed message (old timestamp)"
+            reason = f"Replayed message (older than {time_threshold:.0f}s)"
             
         return is_anomaly, reason
 
     def _distance(self, v1, v2):
         return math.sqrt((v1["lat"] - v2["lat"])**2 + (v1["lon"] - v2["lon"])**2)
 
-    def _check_boundaries(self, vehicle):
-        pass
-
-# --- FastAPI App ---
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-sim = SimulationEngine()
-
-class AttackRequest(BaseModel):
-    type: Optional[str] = None
-
-class ParamsRequest(BaseModel):
-    params: Dict[str, Any]
-
-class VehicleUpdate(BaseModel):
-    vehicle_id: str
-    updates: Dict[str, Any]
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            if sim.is_running:
-                state = sim.step()
-                await websocket.send_json(state)
-                await asyncio.sleep(0.1) # 10 FPS
-            else:
-                # Send current state even if paused
-                state = sim.get_current_state()
-                await websocket.send_json(state)
-                await asyncio.sleep(0.5)
-    except Exception as e:
-        print(f"WebSocket error: {e}")
-
-@app.post("/control/start")
-def start_simulation():
-    sim.start()
-    return {"status": "started"}
-
-@app.post("/control/stop")
-def stop_simulation():
-    sim.stop()
-    return {"status": "stopped"}
-
-@app.post("/control/reset")
-def reset_simulation():
-    sim.reset()
-    return {"status": "reset"}
-
-@app.post("/control/attack")
-def trigger_attack(req: AttackRequest):
-    sim.set_attack(req.type)
-    return {"status": "attack_set", "type": req.type}
-
-@app.post("/control/params")
-def update_params(req: ParamsRequest):
-    sim.update_params(req.params)
-    return {"status": "params_updated"}
-
-@app.post("/control/vehicle")
-def update_vehicle(req: VehicleUpdate):
-    sim.update_vehicle(req.vehicle_id, req.updates)
-    return {"status": "vehicle_updated"}
-
-@app.get("/presets")
-def get_presets():
-    return {"scenarios": [
-        {"id": "city_center", "name": "City Center", "description": "Busy downtown traffic with many intersections"},
-        {"id": "highway", "name": "Highway", "description": "High speed flow with fewer stops"},
-        {"id": "suburbs", "name": "Suburbs", "description": "Low density residential area"}
-    ]}
-
-@app.post("/presets/{preset_id}")
-def load_preset(preset_id: str):
-    # For now, just reset. In future, could load specific maps.
-    sim.reset()
-    return {"status": "preset_loaded", "preset": preset_id}

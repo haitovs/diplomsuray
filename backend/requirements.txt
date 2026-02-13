@@ -1,7 +1,5 @@
 fastapi
 uvicorn[standard]
-pandas
-numpy
-scikit-learn
 websockets
 pydantic
+networkx

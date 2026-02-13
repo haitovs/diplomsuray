@@ -195,6 +195,8 @@ function App() {
   const [showHelp, setShowHelp] = useState(false)
   const [presets, setPresets] = useState<Preset[]>([])
   const [activeAlerts, setActiveAlerts] = useState<Anomaly[]>([])
+  const [logTab, setLogTab] = useState<'attacks' | 'defenses' | 'outcomes'>('attacks')
+  const [attackSophistication, setAttackSophistication] = useState<'low' | 'medium' | 'high'>('medium')
 
   // Viewport State (Pan/Zoom)
   const [viewState, setViewState] = useState({ x: 0, y: 0, zoom: 1 })
@@ -204,6 +206,7 @@ function App() {
   const wsRef = useRef<WebSocket | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const particlesRef = useRef<Particle[]>([])
+  const reconnectAttemptRef = useRef(0)
 
   // Default params
   const [localParams, setLocalParams] = useState({
@@ -247,39 +250,60 @@ function App() {
     ws.onopen = () => {
       console.log('Connected to WebSocket')
       setConnected(true)
+      reconnectAttemptRef.current = 0
     }
     ws.onclose = () => {
       console.log('Disconnected from WebSocket')
       setConnected(false)
-      setTimeout(connectWebSocket, 1000)
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current), 30000)
+      reconnectAttemptRef.current += 1
+      console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttemptRef.current})...`)
+      setTimeout(connectWebSocket, delay)
+    }
+    ws.onerror = () => {
+      console.error('WebSocket error')
     }
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      setSimulationState(data)
+      try {
+        const data = JSON.parse(event.data)
+        setSimulationState(data)
+      } catch (e) {
+        console.error('Failed to parse WebSocket message:', e)
+      }
     }
     wsRef.current = ws
   }
 
+  const apiFetch = async (url: string, options?: RequestInit) => {
+    try {
+      const res = await fetch(url, options)
+      if (!res.ok) console.error(`API error: ${res.status} ${res.statusText}`)
+      return res
+    } catch (e) {
+      console.error(`Network error calling ${url}:`, e)
+      return null
+    }
+  }
+
   const startSimulation = async () => {
-    await fetch('http://localhost:8000/control/start', { method: 'POST' })
+    await apiFetch('http://localhost:8000/control/start', { method: 'POST' })
     setIsRunning(true)
   }
 
   const stopSimulation = async () => {
-    await fetch('http://localhost:8000/control/stop', { method: 'POST' })
+    await apiFetch('http://localhost:8000/control/stop', { method: 'POST' })
     setIsRunning(false)
   }
 
   const resetSimulation = async () => {
-    await fetch('http://localhost:8000/control/reset', { method: 'POST' })
+    await apiFetch('http://localhost:8000/control/reset', { method: 'POST' })
     setIsRunning(false)
     setSimulationState(null)
     setActiveAlerts([])
     particlesRef.current = []
   }
 
-  const triggerAttack = async (type: string, sophistication: 'low' | 'medium' | 'high' = 'medium') => {
-    // Map frontend attack names to backend ATTACK_TYPES keys
+  const triggerAttack = async (type: string) => {
     const attackTypeMap: Record<string, string> = {
       'sybil': 'sybil',
       'replay': 'message_replay',
@@ -287,18 +311,16 @@ function App() {
       'dos': 'dos_flooding',
       'gps_spoof': 'gps_spoofing'
     }
-
     const backendAttackType = attackTypeMap[type] || type
-
-    await fetch('http://localhost:8000/control/attack', {
+    await apiFetch('http://localhost:8000/control/attack', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: backendAttackType, sophistication })
+      body: JSON.stringify({ type: backendAttackType, sophistication: attackSophistication })
     })
   }
 
   const clearAttack = async () => {
-    await fetch('http://localhost:8000/control/attack', {
+    await apiFetch('http://localhost:8000/control/attack', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: null, sophistication: 'medium' })
@@ -307,7 +329,7 @@ function App() {
 
   const updateParams = async (params: Partial<SimulationState['params']>) => {
     setLocalParams(prev => ({ ...prev, ...params }))
-    await fetch('http://localhost:8000/control/params', {
+    await apiFetch('http://localhost:8000/control/params', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ params })
@@ -315,7 +337,7 @@ function App() {
   }
 
   const updateVehicle = async (vehicleId: string, updates: Partial<Vehicle>) => {
-    await fetch('http://localhost:8000/control/vehicle', {
+    await apiFetch('http://localhost:8000/control/vehicle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ vehicle_id: vehicleId, updates })
@@ -323,7 +345,7 @@ function App() {
   }
 
   const loadPreset = async (presetId: string) => {
-    await fetch(`http://localhost:8000/presets/${presetId}`, { method: 'POST' })
+    await apiFetch(`http://localhost:8000/presets/${presetId}`, { method: 'POST' })
   }
 
   const project = (lat: number, lon: number, bounds: any, width: number, height: number) => {
@@ -366,8 +388,15 @@ function App() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const width = canvas.width
-    const height = canvas.height
+    // Responsive canvas resolution
+    const rect = canvas.getBoundingClientRect()
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = rect.width * dpr
+    canvas.height = rect.height * dpr
+    ctx.scale(dpr, dpr)
+
+    const width = rect.width
+    const height = rect.height
 
     // Clear
     ctx.fillStyle = '#0f172a'
@@ -829,6 +858,30 @@ function App() {
               <Zap className="w-3 h-3" /> Cyber Attacks
             </h2>
             <div className="text-[10px] text-slate-500 mb-2">Trigger specific attacks on the current simulation.</div>
+
+            {/* Sophistication Selector */}
+            <div className="mb-3">
+              <div className="text-[10px] text-slate-400 mb-1.5 font-medium">Attack Sophistication:</div>
+              <div className="flex gap-1">
+                {(['low', 'medium', 'high'] as const).map(level => (
+                  <button
+                    key={level}
+                    onClick={() => setAttackSophistication(level)}
+                    className={clsx(
+                      "flex-1 py-1.5 rounded text-[10px] font-bold uppercase transition-all border",
+                      attackSophistication === level
+                        ? level === 'low' ? "bg-blue-500/20 border-blue-500/50 text-blue-300"
+                        : level === 'medium' ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-300"
+                        : "bg-red-500/20 border-red-500/50 text-red-300"
+                        : "bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-300"
+                    )}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => triggerAttack('sybil')}
@@ -979,8 +1032,6 @@ function App() {
         <div className="flex-1 relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 to-slate-950">
           <canvas
             ref={canvasRef}
-            width={1200}
-            height={800}
             className="w-full h-full cursor-move"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -990,22 +1041,24 @@ function App() {
             onClick={(e) => {
               if (!simulationState || !canvasRef.current || isDragging) return
               const rect = canvasRef.current.getBoundingClientRect()
-              const x = e.clientX - rect.left
-              const y = e.clientY - rect.top
+              const cssX = e.clientX - rect.left
+              const cssY = e.clientY - rect.top
+              const width = rect.width
+              const height = rect.height
 
-              // Transform click to world coordinates
-              const worldX = (x - canvasRef.current.width / 2 - viewState.x) / viewState.zoom + canvasRef.current.width / 2
-              const worldY = (y - canvasRef.current.height / 2 - viewState.y) / viewState.zoom + canvasRef.current.height / 2
+              // Transform click from CSS -> world (undo pan/zoom)
+              const worldX = (cssX - width / 2 - viewState.x) / viewState.zoom + width / 2
+              const worldY = (cssY - height / 2 - viewState.y) / viewState.zoom + height / 2
 
-              // Find clicked vehicle
               for (const v of simulationState.vehicles) {
-                const pos = project(v.lat, v.lon, simulationState.bounds, canvasRef.current.width, canvasRef.current.height)
+                const pos = project(v.lat, v.lon, simulationState.bounds, width, height)
                 const dist = Math.sqrt((pos.x - worldX) ** 2 + (pos.y - worldY) ** 2)
                 if (dist < 20) {
                   setSelectedVehicle(v)
-                  break
+                  return
                 }
               }
+              setSelectedVehicle(null)
             }}
           />
 
@@ -1111,143 +1164,214 @@ function App() {
 
         {/* Tabs */}
         <div className="flex border-b border-slate-800">
-          <button className="flex-1 px-3 py-2 text-xs font-medium border-b-2 border-red-500 text-red-300 bg-red-500/5">
+          <button
+            onClick={() => setLogTab('attacks')}
+            className={clsx(
+              "flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors",
+              logTab === 'attacks' ? "border-red-500 text-red-300 bg-red-500/5" : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+            )}
+          >
             Attacks ({simulationState?.attack_logs?.length || 0})
           </button>
-          <button className="flex-1 px-3 py-2 text-xs font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800/50">
+          <button
+            onClick={() => setLogTab('defenses')}
+            className={clsx(
+              "flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors",
+              logTab === 'defenses' ? "border-blue-500 text-blue-300 bg-blue-500/5" : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+            )}
+          >
             Defenses ({simulationState?.defense_logs?.length || 0})
           </button>
-          <button className="flex-1 px-3 py-2 text-xs font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800/50">
+          <button
+            onClick={() => setLogTab('outcomes')}
+            className={clsx(
+              "flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors",
+              logTab === 'outcomes' ? "border-emerald-500 text-emerald-300 bg-emerald-500/5" : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+            )}
+          >
             Outcomes ({simulationState?.outcome_logs?.length || 0})
           </button>
         </div>
 
         {/* Log Content */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
-          {/* Attack Logs */}
-          {simulationState?.attack_logs && simulationState.attack_logs.length > 0 ? (
-            simulationState.attack_logs.slice().reverse().map((attack) => (
-              <div
-                key={attack.id}
-                className={clsx(
-                  "p-3 rounded-lg border transition-all",
-                  attack.status === 'blocked' && "bg-emerald-500/5 border-emerald-500/20",
-                  attack.status === 'succeeded' && "bg-red-500/10 border-red-500/30",
-                  attack.status === 'initiated' && "bg-yellow-500/5 border-yellow-500/20 animate-pulse"
-                )}
-              >
-                {/* Attack Header */}
-                <div className="flex items-start gap-2 mb-2">
-                  <span className="text-lg">{attack.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-white truncate">
-                      {simulationState.available_attacks?.[attack.attack_type]?.name || attack.attack_type}
+
+          {/* ===== ATTACKS TAB ===== */}
+          {logTab === 'attacks' && (
+            <>
+              {simulationState?.attack_logs && simulationState.attack_logs.length > 0 ? (
+                simulationState.attack_logs.slice().reverse().map((attack) => (
+                  <div
+                    key={attack.id}
+                    className={clsx(
+                      "p-3 rounded-lg border transition-all",
+                      attack.status === 'blocked' && "bg-emerald-500/5 border-emerald-500/20",
+                      attack.status === 'succeeded' && "bg-red-500/10 border-red-500/30",
+                      attack.status === 'initiated' && "bg-yellow-500/5 border-yellow-500/20 animate-pulse"
+                    )}
+                  >
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className="text-lg">{attack.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold text-white truncate">
+                          {simulationState.available_attacks?.[attack.attack_type]?.name || attack.attack_type}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {attack.attacker_id} → {attack.target_ids.slice(0, 2).join(', ')}
+                          {attack.target_ids.length > 2 && ` +${attack.target_ids.length - 2}`}
+                        </div>
+                      </div>
+                      <div className={clsx(
+                        "px-2 py-0.5 rounded text-[9px] font-bold uppercase",
+                        attack.sophistication === 'high' && "bg-red-500/20 text-red-300",
+                        attack.sophistication === 'medium' && "bg-yellow-500/20 text-yellow-300",
+                        attack.sophistication === 'low' && "bg-blue-500/20 text-blue-300"
+                      )}>
+                        {attack.sophistication}
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-400">
-                      {attack.attacker_id} → {attack.target_ids.slice(0, 2).join(', ')}
-                      {attack.target_ids.length > 2 && ` +${attack.target_ids.length - 2}`}
+                    <p className="text-[10px] text-slate-300 leading-relaxed mb-2">{attack.description}</p>
+                    <div className="flex gap-2 text-[9px]">
+                      <div className="bg-slate-800/50 px-2 py-1 rounded flex-1">
+                        <span className="text-slate-500">Bypass:</span>{' '}
+                        <span className="font-mono text-orange-400">
+                          {(attack.attack_data.bypass_chance * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className={clsx(
+                        "px-2 py-1 rounded font-bold",
+                        attack.status === 'blocked' && "bg-emerald-500/20 text-emerald-300",
+                        attack.status === 'succeeded' && "bg-red-500/20 text-red-300",
+                        attack.status === 'initiated' && "bg-yellow-500/20 text-yellow-300"
+                      )}>
+                        {attack.status === 'blocked' && '✓ BLOCKED'}
+                        {attack.status === 'succeeded' && '✗ SUCCEEDED'}
+                        {attack.status === 'initiated' && '⏳ ACTIVE'}
+                      </div>
                     </div>
+                    <details className="mt-2">
+                      <summary className="text-[9px] text-emerald-400 cursor-pointer hover:text-emerald-300 select-none">
+                        📚 Learn More
+                      </summary>
+                      <p className="text-[9px] text-slate-400 mt-1 leading-relaxed pl-4">
+                        {attack.educational_context}
+                      </p>
+                    </details>
                   </div>
-                  <div className={clsx(
-                    "px-2 py-0.5 rounded text-[9px] font-bold uppercase",
-                    attack.sophistication === 'high' && "bg-red-500/20 text-red-300",
-                    attack.sophistication === 'medium' && "bg-yellow-500/20 text-yellow-300",
-                    attack.sophistication === 'low' && "bg-blue-500/20 text-blue-300"
-                  )}>
-                    {attack.sophistication}
-                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2 py-8">
+                  <AlertTriangle className="w-8 h-8 opacity-20" />
+                  <span className="text-xs">No attacks detected</span>
+                  <span className="text-[10px] text-center px-4">
+                    Trigger an attack from the left panel to see real-time attack detection
+                  </span>
                 </div>
-
-                {/* Attack Description */}
-                <p className="text-[10px] text-slate-300 leading-relaxed mb-2">
-                  {attack.description}
-                </p>
-
-                {/* Attack Data */}
-                <div className="flex gap-2 text-[9px]">
-                  <div className="bg-slate-800/50 px-2 py-1 rounded flex-1">
-                    <span className="text-slate-500">Bypass:</span>{' '}
-                    <span className="font-mono text-orange-400">
-                      {(attack.attack_data.bypass_chance * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <div className={clsx(
-                    "px-2 py-1 rounded font-bold",
-                    attack.status === 'blocked' && "bg-emerald-500/20 text-emerald-300",
-                    attack.status === 'succeeded' && "bg-red-500/20 text-red-300",
-                    attack.status === 'initiated' && "bg-yellow-500/20 text-yellow-300"
-                  )}>
-                    {attack.status === 'blocked' && '✓ BLOCKED'}
-                    {attack.status === 'succeeded' && '✗ SUCCEEDED'}
-                    {attack.status === 'initiated' && '⏳ ACTIVE'}
-                  </div>
-                </div>
-
-                {/* Educational Context (Expandable) */}
-                <details className="mt-2">
-                  <summary className="text-[9px] text-emerald-400 cursor-pointer hover:text-emerald-300 select-none">
-                    📚 Learn More
-                  </summary>
-                  <p className="text-[9px] text-slate-400 mt-1 leading-relaxed pl-4">
-                    {attack.educational_context}
-                  </p>
-                </details>
-              </div>
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2 py-8">
-              <AlertTriangle className="w-8 h-8 opacity-20" />
-              <span className="text-xs">No attacks detected</span>
-              <span className="text-[10px] text-center px-4">
-                Trigger an attack from the left panel to see real-time attack detection
-              </span>
-            </div>
+              )}
+            </>
           )}
 
-          {/* Defense Logs */}
-          {simulationState?.defense_logs && simulationState.defense_logs.slice(-5).reverse().map((defense) => (
-            <div
-              key={defense.id}
-              className={clsx(
-                "p-2 rounded border text-[10px]",
-                defense.success ? "bg-blue-500/5 border-blue-500/20" : "bg-slate-800/50 border-slate-700"
+          {/* ===== DEFENSES TAB ===== */}
+          {logTab === 'defenses' && (
+            <>
+              {simulationState?.defense_logs && simulationState.defense_logs.length > 0 ? (
+                simulationState.defense_logs.slice().reverse().map((defense) => (
+                  <div
+                    key={defense.id}
+                    className={clsx(
+                      "p-3 rounded-lg border text-xs",
+                      defense.success ? "bg-blue-500/5 border-blue-500/20" : "bg-red-500/5 border-red-500/20"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{defense.icon}</span>
+                      <div className="flex-1">
+                        <div className="font-bold text-white text-[11px]">
+                          {simulationState.available_defenses?.[defense.defense_type]?.name || defense.defense_type}
+                        </div>
+                        <div className="text-[10px] text-slate-400">vs {defense.attacker_id}</div>
+                      </div>
+                      <div className={clsx(
+                        "px-2 py-0.5 rounded text-[9px] font-bold",
+                        defense.success ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"
+                      )}>
+                        {defense.success ? '✓ SUCCESS' : '✗ FAILED'}
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-slate-300 mb-2">{defense.action_taken}</div>
+                    <div className="flex gap-2 text-[9px]">
+                      <div className="bg-slate-800/50 px-2 py-1 rounded">
+                        <span className="text-slate-500">Confidence:</span>{' '}
+                        <span className="font-mono text-blue-400">{(defense.confidence * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="bg-slate-800/50 px-2 py-1 rounded">
+                        <span className="text-slate-500">Time:</span>{' '}
+                        <span className="font-mono text-cyan-400">{defense.detection_time}s</span>
+                      </div>
+                    </div>
+                    <details className="mt-2">
+                      <summary className="text-[9px] text-blue-400 cursor-pointer hover:text-blue-300 select-none">
+                        📚 How it works
+                      </summary>
+                      <p className="text-[9px] text-slate-400 mt-1 leading-relaxed pl-4">
+                        {defense.explanation}
+                      </p>
+                    </details>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2 py-8">
+                  <Shield className="w-8 h-8 opacity-20" />
+                  <span className="text-xs">No defenses activated</span>
+                  <span className="text-[10px] text-center px-4">
+                    Defense logs appear when attacks are resolved
+                  </span>
+                </div>
               )}
-            >
-              <div className="flex items-center gap-2">
-                <span>{defense.icon}</span>
-                <span className="font-mono text-blue-300 flex-1">{defense.action_taken}</span>
-              </div>
-            </div>
-          ))}
+            </>
+          )}
 
-          {/* Outcome Logs */}
-          {simulationState?.outcome_logs && simulationState.outcome_logs.slice(-3).reverse().map((outcome) => (
-            <div
-              key={outcome.id}
-              className={clsx(
-                "p-3 rounded-lg border",
-                outcome.result === 'blocked' && "bg-emerald-500/10 border-emerald-500/30",
-                outcome.result === 'full_success' && "bg-red-500/10 border-red-500/30"
+          {/* ===== OUTCOMES TAB ===== */}
+          {logTab === 'outcomes' && (
+            <>
+              {simulationState?.outcome_logs && simulationState.outcome_logs.length > 0 ? (
+                simulationState.outcome_logs.slice().reverse().map((outcome) => (
+                  <div
+                    key={outcome.id}
+                    className={clsx(
+                      "p-3 rounded-lg border",
+                      outcome.result === 'blocked' && "bg-emerald-500/10 border-emerald-500/30",
+                      outcome.result === 'full_success' && "bg-red-500/10 border-red-500/30"
+                    )}
+                  >
+                    <div className="font-bold text-xs mb-1 flex items-center gap-2">
+                      {outcome.result === 'blocked' ? (
+                        <span className="text-emerald-400">✓ Attack Blocked</span>
+                      ) : (
+                        <span className="text-red-400">✗ Attack Succeeded</span>
+                      )}
+                      <span className="ml-auto text-[9px] text-slate-500 font-normal">
+                        {outcome.defenses_triggered} defense{outcome.defenses_triggered !== 1 ? 's' : ''} triggered
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-300 mb-2">{outcome.impact_description}</p>
+                    <div className="bg-slate-800/50 p-2 rounded text-[9px]">
+                      <div className="text-emerald-400 font-bold mb-1">💡 Learning Point:</div>
+                      <div className="text-slate-400 leading-relaxed">{outcome.learning_points}</div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2 py-8">
+                  <Activity className="w-8 h-8 opacity-20" />
+                  <span className="text-xs">No outcomes yet</span>
+                  <span className="text-[10px] text-center px-4">
+                    Outcomes appear after attacks are resolved by defense systems
+                  </span>
+                </div>
               )}
-            >
-              <div className="font-bold text-xs mb-1 flex items-center gap-2">
-                {outcome.result === 'blocked' ? (
-                  <>
-                    <span className="text-emerald-400">✓ Attack Blocked</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-red-400">✗ Attack Succeeded</span>
-                  </>
-                )}
-              </div>
-              <p className="text-[10px] text-slate-300 mb-2">{outcome.impact_description}</p>
-              <div className="bg-slate-800/50 p-2 rounded text-[9px]">
-                <div className="text-emerald-400 font-bold mb-1">💡 Learning Point:</div>
-                <div className="text-slate-400 leading-relaxed">{outcome.learning_points}</div>
-              </div>
-            </div>
-          ))}
+            </>
+          )}
         </div>
 
         {/* Stats Footer */}

@@ -190,6 +190,21 @@ interface Particle {
 const API_BASE = `${window.location.origin}/api`
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws`
 
+// Status translation map
+const STATUS_RU: Record<string, string> = {
+  'moving': 'в движении',
+  'stopped': 'остановлен',
+  'arrived': 'прибыл',
+  'waiting': 'ожидание',
+}
+
+// Sophistication translation map
+const SOPHISTICATION_RU: Record<string, string> = {
+  'low': 'НИЗКИЙ',
+  'medium': 'СРЕДНИЙ',
+  'high': 'ВЫСОКИЙ',
+}
+
 function App() {
   const [connected, setConnected] = useState(false)
   const [simulationState, setSimulationState] = useState<SimulationState | null>(null)
@@ -198,6 +213,7 @@ function App() {
   const [showParams, setShowParams] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showWelcome, setShowWelcome] = useState(true)
+  const [currentLang, setCurrentLang] = useState<'ru' | 'en' | 'tk'>('ru')
   const [presets, setPresets] = useState<Preset[]>([])
   const [activeAlerts, setActiveAlerts] = useState<Anomaly[]>([])
   const [logTab, setLogTab] = useState<'attacks' | 'defenses' | 'outcomes'>('attacks')
@@ -623,6 +639,64 @@ function App() {
         ctx.textAlign = 'start'
       }
 
+      // Pulsing attack ring around hacker when actively attacking
+      if (v.is_attacker && simulationState?.active_attack) {
+        const pulse = (Math.sin(Date.now() / 200) + 1) / 2 // 0-1 pulse
+        const radius = 20 + pulse * 15
+        ctx.strokeStyle = `rgba(239, 68, 68, ${0.3 + pulse * 0.4})`
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
+        ctx.stroke()
+
+        // Draw attack line to nearest non-attacker vehicle
+        const targets = simulationState.vehicles.filter(t => !t.is_attacker)
+        if (targets.length > 0) {
+          const nearest = targets.reduce((best, t) => {
+            const tPos = project(t.lat, t.lon, simulationState.bounds, width, height)
+            const dist = Math.hypot(tPos.x - pos.x, tPos.y - pos.y)
+            const bestPos = project(best.lat, best.lon, simulationState.bounds, width, height)
+            const bestDist = Math.hypot(bestPos.x - pos.x, bestPos.y - pos.y)
+            return dist < bestDist ? t : best
+          })
+          const nearPos = project(nearest.lat, nearest.lon, simulationState.bounds, width, height)
+          
+          // Dashed red line
+          ctx.strokeStyle = `rgba(239, 68, 68, ${0.4 + pulse * 0.3})`
+          ctx.lineWidth = 2
+          ctx.setLineDash([6, 4])
+          ctx.beginPath()
+          ctx.moveTo(pos.x, pos.y)
+          ctx.lineTo(nearPos.x, nearPos.y)
+          ctx.stroke()
+          ctx.setLineDash([])
+
+          // "АТАКА →" label at midpoint
+          const midX = (pos.x + nearPos.x) / 2
+          const midY = (pos.y + nearPos.y) / 2
+          ctx.fillStyle = '#fca5a5'
+          ctx.font = 'bold 9px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.fillText('АТАКА →', midX, midY - 5)
+          ctx.textAlign = 'start'
+        }
+      }
+
+      // Vehicle type label
+      ctx.font = 'bold 8px sans-serif'
+      ctx.textAlign = 'center'
+      if (v.is_attacker) {
+        ctx.fillStyle = '#fca5a5'
+        ctx.fillText('ХАКЕР', pos.x, pos.y + (v.status === 'stopped' ? 32 : 18))
+      } else if (v.type === 'truck' || v.type === 'bus') {
+        ctx.fillStyle = '#86efac'
+        ctx.fillText('Грузовик', pos.x, pos.y + (v.status === 'stopped' ? 32 : 18))
+      } else {
+        ctx.fillStyle = '#93c5fd'
+        ctx.fillText('Авто', pos.x, pos.y + (v.status === 'stopped' ? 32 : 18))
+      }
+      ctx.textAlign = 'start'
+
       // Vehicle ID
       ctx.fillStyle = '#e2e8f0'
       ctx.font = 'bold 10px monospace'
@@ -817,13 +891,39 @@ function App() {
                 <div className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Лаборатория симуляции</div>
               </div>
             </div>
-            <button
-              onClick={() => setShowHelp(true)}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-full transition-all hover:scale-110 shadow-lg border border-slate-700"
-              title="Help / Помощь"
-            >
-              <HelpCircle className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              {/* Language Toggle */}
+              <div className="flex rounded-lg overflow-hidden border border-slate-700">
+                {(['ru', 'en', 'tk'] as const).map(lang => (
+                  <button
+                    key={lang}
+                    onClick={() => {
+                      if (lang !== 'ru') {
+                        alert(lang === 'en' ? 'English — coming soon / Скоро' : 'Türkmen dili — ýakyn wagtda / Скоро')
+                      } else {
+                        setCurrentLang(lang)
+                      }
+                    }}
+                    className={clsx(
+                      "px-2 py-1 text-[10px] font-bold transition-colors",
+                      currentLang === lang
+                        ? "bg-emerald-600 text-white"
+                        : "bg-slate-800 text-slate-500 hover:text-slate-300"
+                    )}
+                    title={lang === 'ru' ? 'Русский' : lang === 'en' ? 'English (скоро)' : 'Türkmen (скоро)'}
+                  >
+                    {lang === 'ru' ? '🇷🇺' : lang === 'en' ? '🇬🇧' : '🇹🇲'}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowHelp(true)}
+                className="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-full transition-all hover:scale-110 shadow-lg border border-slate-700"
+                title="Помощь"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Status */}
@@ -832,7 +932,7 @@ function App() {
             <span className="font-mono text-slate-400">{connected ? "СИСТЕМА ОНЛАЙН" : "НЕТ ПОДКЛЮЧЕНИЯ"}</span>
             {simulationState?.active_attack && (
               <span className="ml-auto px-2 py-0.5 bg-red-500/20 text-red-200 rounded text-[10px] font-bold border border-red-500/30 animate-pulse">
-                ⚠ ATTACK: {simulationState.active_attack.toUpperCase()}
+                ⚠ АТАКА: {(simulationState.available_attacks?.[simulationState.active_attack]?.name || simulationState.active_attack).toUpperCase()}
               </span>
             )}
           </div>
@@ -850,7 +950,7 @@ function App() {
                 <button
                   onClick={startSimulation}
                   className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg transition-all shadow-lg shadow-emerald-900/20 font-medium text-sm"
-                  title="Start Simulation"
+                  title="Запустить симуляцию"
                 >
                   <Play className="w-4 h-4 fill-current" /> Старт
                 </button>
@@ -858,7 +958,7 @@ function App() {
                 <button
                   onClick={stopSimulation}
                   className="flex-1 flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-lg transition-all shadow-lg shadow-amber-900/20 font-medium text-sm"
-                  title="Pause Simulation"
+                  title="Пауза симуляции"
                 >
                   <Pause className="w-4 h-4 fill-current" /> Пауза
                 </button>
@@ -984,7 +1084,7 @@ function App() {
                         : "bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-300"
                     )}
                   >
-                    {level}
+                    {SOPHISTICATION_RU[level] || level}
                   </button>
                 ))}
               </div>
@@ -1060,7 +1160,7 @@ function App() {
                     selectedVehicle.status === 'moving' ? "text-emerald-400" :
                       selectedVehicle.status === 'stopped' ? "text-red-400" : "text-blue-400"
                   )}>
-                    {selectedVehicle.status.toUpperCase()}
+                    {(STATUS_RU[selectedVehicle.status] || selectedVehicle.status).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -1208,7 +1308,7 @@ function App() {
             <button
               onClick={() => setViewState({ x: 0, y: 0, zoom: 1 })}
               className="p-2 bg-slate-800/90 backdrop-blur hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 shadow-xl"
-              title="Reset View"
+              title="Сбросить вид"
             >
               <Move className="w-5 h-5" />
             </button>
@@ -1266,7 +1366,7 @@ function App() {
                   <div className="flex justify-between text-[10px]">
                     <span className="text-slate-500">Статус</span>
                     <span className={clsx("font-mono", v.status === 'stopped' ? "text-red-400" : "text-blue-400")}>
-                      {v.status}
+                      {STATUS_RU[v.status] || v.status}
                     </span>
                   </div>
                 </div>
@@ -1352,13 +1452,13 @@ function App() {
                         attack.sophistication === 'medium' && "bg-yellow-500/20 text-yellow-300",
                         attack.sophistication === 'low' && "bg-blue-500/20 text-blue-300"
                       )}>
-                        {attack.sophistication}
+                        {SOPHISTICATION_RU[attack.sophistication] || attack.sophistication}
                       </div>
                     </div>
                     <p className="text-[10px] text-slate-300 leading-relaxed mb-2">{attack.description}</p>
                     <div className="flex gap-2 text-[9px]">
                       <div className="bg-slate-800/50 px-2 py-1 rounded flex-1">
-                        <span className="text-slate-500">Bypass:</span>{' '}
+                        <span className="text-slate-500">Обход:</span>{' '}
                         <span className="font-mono text-orange-400">
                           {(attack.attack_data.bypass_chance * 100).toFixed(0)}%
                         </span>
@@ -1369,9 +1469,9 @@ function App() {
                         attack.status === 'succeeded' && "bg-red-500/20 text-red-300",
                         attack.status === 'initiated' && "bg-yellow-500/20 text-yellow-300"
                       )}>
-                        {attack.status === 'blocked' && '✓ BLOCKED'}
-                        {attack.status === 'succeeded' && '✗ SUCCEEDED'}
-                        {attack.status === 'initiated' && '⏳ ACTIVE'}
+                        {attack.status === 'blocked' && '✓ ЗАБЛОКИРОВАНО'}
+                        {attack.status === 'succeeded' && '✗ ПРОШЛО'}
+                        {attack.status === 'initiated' && '⏳ АКТИВНО'}
                       </div>
                     </div>
                     <details className="mt-2">
@@ -1420,17 +1520,17 @@ function App() {
                         "px-2 py-0.5 rounded text-[9px] font-bold",
                         defense.success ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"
                       )}>
-                        {defense.success ? '✓ SUCCESS' : '✗ FAILED'}
+                        {defense.success ? '✓ УСПЕХ' : '✗ ПРОВАЛ'}
                       </div>
                     </div>
                     <div className="text-[10px] text-slate-300 mb-2">{defense.action_taken}</div>
                     <div className="flex gap-2 text-[9px]">
                       <div className="bg-slate-800/50 px-2 py-1 rounded">
-                        <span className="text-slate-500">Confidence:</span>{' '}
+                        <span className="text-slate-500">Уверенность:</span>{' '}
                         <span className="font-mono text-blue-400">{(defense.confidence * 100).toFixed(0)}%</span>
                       </div>
                       <div className="bg-slate-800/50 px-2 py-1 rounded">
-                        <span className="text-slate-500">Time:</span>{' '}
+                        <span className="text-slate-500">Время:</span>{' '}
                         <span className="font-mono text-cyan-400">{defense.detection_time}s</span>
                       </div>
                     </div>
@@ -1476,7 +1576,7 @@ function App() {
                         <span className="text-red-400">✗ Атака прошла</span>
                       )}
                       <span className="ml-auto text-[9px] text-slate-500 font-normal">
-                        {outcome.defenses_triggered} defense{outcome.defenses_triggered !== 1 ? 's' : ''} triggered
+                        {outcome.defenses_triggered} защит сработало
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-300 mb-2">{outcome.impact_description}</p>

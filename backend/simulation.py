@@ -17,153 +17,153 @@ VEHICLE_TYPES = {
 # ===== REALISTIC V2X ATTACK TYPES =====
 ATTACK_TYPES = {
     "position_falsification": {
-        "name": "Position Falsification Attack",
+        "name": "Фальсификация позиции",
         "category": "message_manipulation",
-        "description": "Attacker reports false GPS coordinates in BSM messages, appearing to be in a different location than actual position.",
+        "description": "Атакующий передаёт ложные GPS-координаты в BSM-сообщениях, создавая видимость нахождения в другом месте.",
         "severity": "high",
-        "real_world_example": "An attacker could appear to be blocking a lane, causing other vehicles to unnecessarily brake or change lanes.",
+        "real_world_example": "Атакующий может создать видимость заблокированной полосы, заставляя другие автомобили тормозить или менять полосу.",
         "target_layer": ["application"],
-        "educational_notes": "This is one of the most common V2X attacks. Position data is critical for collision avoidance and traffic management.",
+        "educational_notes": "Одна из самых распространённых V2X-атак. Данные о позиции критичны для предотвращения столкновений.",
         "icon": "📍",
         "sophistication_levels": {
-            "low": {"description": "Random positions, easily detected", "bypass_chance": 0.1},
-            "medium": {"description": "Nearby positions with realistic movement patterns", "bypass_chance": 0.4},
-            "high": {"description": "Gradual position drift, difficult to detect", "bypass_chance": 0.7}
+            "low": {"description": "Случайные позиции, легко обнаружить", "bypass_chance": 0.1},
+            "medium": {"description": "Близкие позиции с реалистичным движением", "bypass_chance": 0.4},
+            "high": {"description": "Постепенный дрейф позиции, сложно обнаружить", "bypass_chance": 0.7}
         }
     },
     "gps_spoofing": {
-        "name": "GPS Spoofing Attack",
+        "name": "Подмена GPS-сигнала",
         "category": "sensor_manipulation",
-        "description": "Systematic manipulation of GPS signals to make vehicles believe they are in incorrect locations.",
+        "description": "Систематическая подмена GPS-сигналов, из-за которой автомобили считают, что находятся в неправильном месте.",
         "severity": "critical",
-        "real_world_example": "In 2013, researchers spoofed GPS on a yacht, causing navigation errors. Similar attacks could target V2X systems.",
+        "real_world_example": "В 2013 году исследователи подменили GPS на яхте, вызвав навигационные ошибки. Аналогичные атаки могут быть на V2X.",
         "target_layer": ["physical", "application"],
-        "educational_notes": "GPS spoofing affects the entire positioning system. Unlike position falsification, this attacks the sensor itself.",
+        "educational_notes": "Подмена GPS влияет на всю систему позиционирования. В отличие от фальсификации позиции, здесь атакуется сам датчик.",
         "icon": "🛰️",
         "sophistication_levels": {
-            "low": {"description": "Single-vehicle GPS drift", "bypass_chance": 0.2},
-            "medium": {"description": "Coordinated spoofing affecting multiple vehicles", "bypass_chance": 0.5},
-            "high": {"description": "Gradual GPS drift mimicking natural errors", "bypass_chance": 0.8}
+            "low": {"description": "Дрейф GPS одного автомобиля", "bypass_chance": 0.2},
+            "medium": {"description": "Координированная подмена нескольких машин", "bypass_chance": 0.5},
+            "high": {"description": "Постепенный дрейф, имитирующий естественные ошибки", "bypass_chance": 0.8}
         }
     },
     "sybil": {
-        "name": "Sybil Attack",
+        "name": "Атака Сивиллы",
         "category": "identity",
-        "description": "Attacker creates multiple fake vehicle identities to manipulate traffic information or voting mechanisms.",
+        "description": "Атакующий создаёт множество фейковых транспортных средств для манипуляции информацией о трафике.",
         "severity": "high",
-        "real_world_example": "Could create fake traffic congestion by simulating many vehicles, affecting routing decisions.",
+        "real_world_example": "Может создать ложную пробку, имитируя множество автомобилей и влияя на маршрутизацию.",
         "target_layer": ["network", "application"],
-        "educational_notes": "Named after a psychiatric case study. In V2X, Sybil attacks can overwhelm consensus mechanisms and create false traffic scenarios.",
+        "educational_notes": "Названа по психиатрическому случаю. В V2X атака Сивиллы может перегрузить систему принятия решений.",
         "icon": "👥",
         "sophistication_levels": {
-            "low": {"description": "2-3 fake identities at same location", "bypass_chance": 0.15},
-            "medium": {"description": "Distributed fake vehicles with basic movement", "bypass_chance": 0.45},
-            "high": {"description": "Realistic fake vehicles with coordinated behavior", "bypass_chance": 0.75}
+            "low": {"description": "2-3 фейковых машины в одном месте", "bypass_chance": 0.15},
+            "medium": {"description": "Распределённые фейковые машины с движением", "bypass_chance": 0.45},
+            "high": {"description": "Реалистичные фейковые машины с координацией", "bypass_chance": 0.75}
         }
     },
     "message_replay": {
-        "name": "Message Replay Attack",
+        "name": "Повторная атака",
         "category": "message_manipulation",
-        "description": "Attacker captures legitimate V2X messages and retransmits them at a later time to create false vehicle presence.",
+        "description": "Атакующий перехватывает легитимные V2X-сообщения и ретранслирует их позже, создавая ложное присутствие.",
         "severity": "medium",
-        "real_world_example": "Recording a vehicle's BSM near an intersection and replaying it to make the vehicle appear present when it's not.",
+        "real_world_example": "Запись BSM-сообщений возле перекрёстка и воспроизведение их, чтобы машина казалась на месте.",
         "target_layer": ["application"],
-        "educational_notes": "Replay attacks exploit the lack of message freshness verification. Timestamps and nonces are critical defenses.",
+        "educational_notes": "Повторные атаки эксплуатируют отсутствие проверки актуальности сообщений. Метки времени — ключевая защита.",
         "icon": "🔁",
         "sophistication_levels": {
-            "low": {"description": "Old messages with obvious timestamps", "bypass_chance": 0.1},
-            "medium": {"description": "Messages from a few seconds ago", "bypass_chance": 0.3},
-            "high": {"description": "Timestamp modification with recent messages", "bypass_chance": 0.6}
+            "low": {"description": "Старые сообщения с очевидными метками", "bypass_chance": 0.1},
+            "medium": {"description": "Сообщения давностью в несколько секунд", "bypass_chance": 0.3},
+            "high": {"description": "Модификация меток времени", "bypass_chance": 0.6}
         }
     },
     "dos_flooding": {
-        "name": "Denial of Service (Message Flooding)",
+        "name": "DoS — Переполнение сети",
         "category": "network",
-        "description": "Attacker floods the V2X network with excessive messages, preventing legitimate communications.",
+        "description": "Атакующий заваливает V2X-сеть лишними сообщениями, блокируя легитимные коммуникации.",
         "severity": "critical",
-        "real_world_example": "In congested areas, message flooding could prevent emergency vehicle warnings from being received.",
+        "real_world_example": "Переполнение сети может помешать экстренным предупреждениям дойти до автомобилей.",
         "target_layer": ["network"],
-        "educational_notes": "DoS attacks can cause communication delays exceeding safety-critical thresholds (100ms for collision warnings).",
+        "educational_notes": "DoS-атаки вызывают задержки, превышающие критические пороги безопасности (100мс для предупреждений).",
         "icon": "💥",
         "sophistication_levels": {
-            "low": {"description": "Simple message spam", "bypass_chance": 0.2},
-            "medium": {"description": "Targeted flooding of specific message types", "bypass_chance": 0.5},
-            "high": {"description": "Adaptive flooding that evades rate limiting", "bypass_chance": 0.8}
+            "low": {"description": "Простой спам сообщениями", "bypass_chance": 0.2},
+            "medium": {"description": "Целевое заполнение определённых типов", "bypass_chance": 0.5},
+            "high": {"description": "Адаптивное заполнение, обходящее лимиты", "bypass_chance": 0.8}
         }
     },
     "velocity_spoofing": {
-        "name": "Velocity/Acceleration Spoofing",
+        "name": "Подмена скорости",
         "category": "message_manipulation",
-        "description": "Attacker reports false speed and acceleration values to mislead surrounding vehicles.",
+        "description": "Атакующий передаёт ложные данные о скорости и ускорении, вводя окружающие машины в заблуждение.",
         "severity": "high",
-        "real_world_example": "Reporting sudden braking when not actually braking could cause rear-end collisions.",
+        "real_world_example": "Ложное экстренное торможение может спровоцировать столкновения сзади.",
         "target_layer": ["application"],
-        "educational_notes": "Speed and acceleration are key for time-to-collision calculations. False data can trigger unnecessary emergency braking.",
+        "educational_notes": "Скорость и ускорение критичны для расчёта столкновений. Ложные данные могут вызвать аварийное торможение.",
         "icon": "⚡",
         "sophistication_levels": {
-            "low": {"description": "Impossible speeds (e.g., 500 km/h)", "bypass_chance": 0.05},
-            "medium": {"description": "Exaggerated but plausible speeds", "bypass_chance": 0.35},
-            "high": {"description": "Subtle speed variations that accumulate", "bypass_chance": 0.65}
+            "low": {"description": "Невозможная скорость (500 км/ч)", "bypass_chance": 0.05},
+            "medium": {"description": "Завышенная, но правдоподобная скорость", "bypass_chance": 0.35},
+            "high": {"description": "Небольшие отклонения, накапливающиеся со временем", "bypass_chance": 0.65}
         }
     },
     "certificate_replay": {
-        "name": "Certificate Replay Attack",
+        "name": "Повтор сертификата",
         "category": "cryptographic",
-        "description": "Attacker uses expired or revoked certificates to sign V2X messages, attempting to bypass authentication.",
+        "description": "Атакующий использует истёкшие или отозванные сертификаты для подписи V2X-сообщений.",
         "severity": "high",
-        "real_world_example": "Using a certificate from a decommissioned vehicle to impersonate a legitimate participant.",
+        "real_world_example": "Использование сертификата выведенного из эксплуатации автомобиля для маскировки.",
         "target_layer": ["application", "cryptographic"],
-        "educational_notes": "IEEE 1609.2 requires certificate verification. CRL (Certificate Revocation Lists) must be regularly updated.",
+        "educational_notes": "IEEE 1609.2 требует проверки сертификатов. Списки отзыва (CRL) должны регулярно обновляться.",
         "icon": "🔐",
         "sophistication_levels": {
-            "low": {"description": "Obviously expired certificate", "bypass_chance": 0.1},
-            "medium": {"description": "Recently revoked certificate", "bypass_chance": 0.4},
-            "high": {"description": "Valid-looking certificate with subtle flaws", "bypass_chance": 0.7}
+            "low": {"description": "Очевидно истёкший сертификат", "bypass_chance": 0.1},
+            "medium": {"description": "Недавно отозванный сертификат", "bypass_chance": 0.4},
+            "high": {"description": "Валидно выглядящий сертификат с дефектами", "bypass_chance": 0.7}
         }
     },
     "false_emergency": {
-        "name": "False Emergency Vehicle Alert",
+        "name": "Ложный сигнал скорой помощи",
         "category": "message_manipulation",
-        "description": "Attacker broadcasts fake emergency vehicle warnings to clear traffic or cause disruption.",
+        "description": "Атакующий рассылает фейковые предупреждения о скорой помощи для расчистки дороги.",
         "severity": "high",
-        "real_world_example": "Fake ambulance alerts could cause unnecessary lane changes, creating dangerous situations.",
+        "real_world_example": "Ложные сигналы скорой могут вызвать опасные перестроения.",
         "target_layer": ["application"],
-        "educational_notes": "Emergency vehicle preemption is a critical V2X feature. False alerts undermine trust and can cause accidents.",
+        "educational_notes": "Приоритет экстренных машин — критическая функция V2X. Ложные сигналы подрывают доверие.",
         "icon": "🚨",
         "sophistication_levels": {
-            "low": {"description": "Single fake emergency broadcast", "bypass_chance": 0.25},
-            "medium": {"description": "Coordinated fake emergency scenario", "bypass_chance": 0.55},
-            "high": {"description": "Gradual emergency vehicle approach simulation", "bypass_chance": 0.75}
+            "low": {"description": "Одиночный ложный сигнал", "bypass_chance": 0.25},
+            "medium": {"description": "Координированный ложный сценарий", "bypass_chance": 0.55},
+            "high": {"description": "Имитация приближения скорой", "bypass_chance": 0.75}
         }
     },
     "message_suppression": {
-        "name": "Message Suppression (Jamming)",
+        "name": "Глушение сигнала",
         "category": "network",
-        "description": "Attacker interferes with V2X radio communications to prevent messages from being received.",
+        "description": "Атакующий создаёт помехи в V2X-радиосвязи, блокируя получение сообщений.",
         "severity": "critical",
-        "real_world_example": "Jamming safety warnings at intersections to cause collisions.",
+        "real_world_example": "Глушение предупреждений на перекрёстках может привести к столкновениям.",
         "target_layer": ["physical", "network"],
-        "educational_notes": "Radio jamming is difficult to defend against purely in software. Requires physical layer security and frequency hopping.",
+        "educational_notes": "Радиоглушение сложно защитить программно. Требуется физическая безопасность и смена частот.",
         "icon": "📡",
         "sophistication_levels": {
-            "low": {"description": "Continuous broadband noise", "bypass_chance": 0.3},
-            "medium": {"description": "Selective jamming of specific channels", "bypass_chance": 0.6},
-            "high": {"description": "Reactive jamming triggered by specific messages", "bypass_chance": 0.85}
+            "low": {"description": "Непрерывный широкополосный шум", "bypass_chance": 0.3},
+            "medium": {"description": "Выборочное глушение каналов", "bypass_chance": 0.6},
+            "high": {"description": "Реактивное глушение по триггерам", "bypass_chance": 0.85}
         }
     },
     "illusion": {
-        "name": "Illusion Attack (Coordinated False Scenario)",
+        "name": "Атака-иллюзия",
         "category": "message_manipulation",
-        "description": "Multiple attackers coordinate to create a completely false traffic scenario (e.g., fake traffic jam).",
+        "description": "Несколько атакующих координируются для создания полностью ложного сценария движения.",
         "severity": "critical",
-        "real_world_example": "Creating a fake traffic jam on a highway to divert traffic through a specific area.",
+        "real_world_example": "Создание ложной пробки на шоссе для перенаправления трафика.",
         "target_layer": ["application", "network"],
-        "educational_notes": "Most dangerous when combining Sybil attacks with coordinated false data. Difficult to detect without external verification.",
+        "educational_notes": "Наиболее опасна в сочетании с атакой Сивиллы. Сложно обнаружить без внешней проверки.",
         "icon": "🎭",
         "sophistication_levels": {
-            "low": {"description": "Uncoordinated false reports", "bypass_chance": 0.2},
-            "medium": {"description": "Coordinated false scenario with gaps", "bypass_chance": 0.5},
-            "high": {"description": "Perfect illusion with all details consistent", "bypass_chance": 0.9}
+            "low": {"description": "Нескоординированные ложные отчёты", "bypass_chance": 0.2},
+            "medium": {"description": "Координированный сценарий с пробелами", "bypass_chance": 0.5},
+            "high": {"description": "Идеальная иллюзия со всеми деталями", "bypass_chance": 0.9}
         }
     }
 }
@@ -171,79 +171,79 @@ ATTACK_TYPES = {
 # ===== DEFENSE MECHANISMS =====
 DEFENSE_TYPES = {
     "cryptographic_verification": {
-        "name": "Cryptographic Signature Verification",
+        "name": "Криптографическая проверка подписи",
         "type": "cryptographic",
-        "description": "Verifies digital signatures on V2X messages using IEEE 1609.2 certificates and PKI infrastructure.",
+        "description": "Проверяет цифровые подписи V2X-сообщений с использованием сертификатов IEEE 1609.2 и PKI.",
         "effectiveness": {"low": 90, "medium": 70, "high": 40},
-        "detection_time": 0.05,  # 50ms
+        "detection_time": 0.05,  # 50мс
         "false_positive_rate": 0.01,
-        "educational_notes": "First line of defense. All V2X messages must be signed. Invalid signatures are immediately rejected.",
+        "educational_notes": "Первая линия защиты. Все V2X-сообщения должны быть подписаны. Недействительные подписи сразу отклоняются.",
         "icon": "🔒",
         "applicable_to": ["certificate_replay", "message_replay", "sybil"]
     },
     "plausibility_check": {
-        "name": "Plausibility Validation",
+        "name": "Проверка правдоподобности",
         "type": "behavioral",
-        "description": "Validates message content against physical laws (speed limits, acceleration ranges, position consistency).",
+        "description": "Проверяет содержимое сообщений на соответствие физическим законам (ограничения скорости, ускорение, позиция).",
         "effectiveness": {"low": 95, "medium": 75, "high": 50},
-        "detection_time": 0.1,  # 100ms
+        "detection_time": 0.1,  # 100мс
         "false_positive_rate": 0.05,
-        "educational_notes": "Checks if reported data is physically possible. Speed > 200 km/h on city roads or instant teleportation are flagged.",
+        "educational_notes": "Проверяет, физически ли возможны данные. Скорость >200 км/ч на городских дорогах или мгновенная телепортация — подозрительны.",
         "icon": "⚗️",
         "applicable_to": ["position_falsification", "velocity_spoofing", "gps_spoofing", "false_emergency"]
     },
     "trust_management": {
-        "name": "Trust & Reputation System",
+        "name": "Система доверия и репутации",
         "type": "behavioral",
-        "description": "Maintains trust scores for each vehicle based on historical behavior. Repeated anomalies reduce trust.",
+        "description": "Ведёт уровни доверия для каждого автомобиля на основе истории поведения. Повторные аномалии снижают доверие.",
         "effectiveness": {"low": 60, "medium": 80, "high": 85},
-        "detection_time": 2.0,  # 2 seconds
+        "detection_time": 2.0,  # 2 секунды
         "false_positive_rate": 0.10,
-        "educational_notes": "Long-term defense that builds profiles. Sophisticated attackers maintain high trust initially, then attack.",
+        "educational_notes": "Долгосрочная защита на основе профилей. Опытные атакующие сначала зарабатывают доверие, потом атакуют.",
         "icon": "⭐",
         "applicable_to": ["position_falsification", "velocity_spoofing", "gps_spoofing", "illusion"]
     },
     "misbehavior_detection": {
-        "name": "Intrusion Detection System (IDS)",
+        "name": "Система обнаружения вторжений (IDS)",
         "type": "behavioral",
-        "description": "Machine learning-based anomaly detection identifying unusual patterns in V2X communications.",
+        "description": "Обнаружение аномалий на основе машинного обучения, выявляющее необычные паттерны в V2X-связи.",
         "effectiveness": {"low": 85, "medium": 70, "high": 55},
-        "detection_time": 0.5,  # 500ms
+        "detection_time": 0.5,  # 500мс
         "false_positive_rate": 0.15,
-        "educational_notes": "Uses statistical models to detect deviations from normal traffic patterns. Can catch novel attacks.",
+        "educational_notes": "Использует статистические модели для обнаружения отклонений от нормального трафика. Может обнаружить новые атаки.",
         "icon": "🛡️",
         "applicable_to": ["dos_flooding", "illusion", "message_suppression", "sybil"]
     },
     "collaborative_verification": {
-        "name": "Collaborative Verification (V2V)",
+        "name": "Совместная проверка (V2V)",
         "type": "collaborative",
-        "description": "Cross-validates information with neighboring vehicles to detect inconsistencies.",
+        "description": "Перекрёстная проверка информации с соседними автомобилями для обнаружения несоответствий.",
         "effectiveness": {"low": 70, "medium": 85, "high": 75},
-        "detection_time": 1.0,  # 1 second
+        "detection_time": 1.0,  # 1 секунда
         "false_positive_rate": 0.08,
-        "educational_notes": "If most vehicles agree on a position but one disagrees, the outlier is suspicious. Requires nearby honest vehicles.",
+        "educational_notes": "Если большинство машин согласны, а одна нет — она подозрительна. Требуются честные соседние машины.",
         "icon": "🤝",
         "applicable_to": ["position_falsification", "gps_spoofing", "sybil", "illusion"]
     },
     "rate_limiting": {
-        "name": "Rate Limiting & Throttling",
+        "name": "Ограничение частоты сообщений",
         "type": "network",
-        "description": "Limits message rates per vehicle to prevent flooding attacks.",
+        "description": "Ограничивает частоту сообщений от каждого автомобиля для предотвращения DoS-атак.",
         "effectiveness": {"low": 90, "medium": 70, "high": 45},
-        "detection_time": 0.2,  # 200ms
+        "detection_time": 0.2,  # 200мс
         "false_positive_rate": 0.05,
-        "educational_notes": "IEEE 1609.4 specifies maximum message rates. Exceeding thresholds indicates DoS attack.",
+        "educational_notes": "IEEE 1609.4 определяет максимальную частоту сообщений. Превышение порогов указывает на DoS-атаку.",
         "icon": "⏱️",
         "applicable_to": ["dos_flooding", "sybil"]
     },
     "timestamp_validation": {
-        "name": "Timestamp Freshness Check",
+        "name": "Проверка актуальности меток времени",
         "type": "cryptographic",
-        "description": "Validates message timestamps to detect replay attacks and old messages.",
+        "description": "Проверяет метки времени сообщений для обнаружения повторных атак и устаревших данных.",
         "effectiveness": {"low": 95, "medium": 65, "high": 40},
-        "detection_time": 0.05,  # 50ms
+        "detection_time": 0.05,  # 50мс
         "false_positive_rate": 0.03,
-        "educational_notes": "Messages older than a threshold (typically 1-2 seconds) are rejected. Synchronized clocks are critical.",
+        "educational_notes": "Сообщения старше порога (обычно 1-2 секунды) отклоняются. Синхронизация часов критически важна.",
         "icon": "⏰",
         "applicable_to": ["message_replay"]
     }
@@ -614,10 +614,10 @@ class SimulationEngine:
             action_taken = ""
             
             if defense_success:
-                action_taken = f"✓ Blocked {attack_info['name']} using {defense_info['name']}"
+                action_taken = f"✓ Заблокировано: {attack_info['name']} с помощью {defense_info['name']}"
                 defenses_succeeded.append(defense_key)
             else:
-                action_taken = f"✗ Failed to block {attack_info['name']} - attack too sophisticated"
+                action_taken = f"✗ Не удалось заблокировать {attack_info['name']} — атака слишком сложная"
             
             defense_log = DefenseLog(
                 id=defense_id,
@@ -662,12 +662,12 @@ class SimulationEngine:
         
         if attack_blocked:
             result = "blocked"
-            impact_description = f"Attack was successfully blocked by defense systems. No vehicles were affected."
-            learning_points = f"This demonstrates the importance of layered security. Multiple defense mechanisms working together can stop even sophisticated attacks."
+            impact_description = f"Атака успешно заблокирована системой защиты. Транспортные средства не пострадали."
+            learning_points = f"Это демонстрирует важность многоуровневой защиты. Несколько механизмов защиты совместно останавливают даже сложные атаки."
         else:
             result = "full_success"
-            impact_description = f"Attack succeeded. Target vehicles may have received false information, potentially affecting their driving decisions."
-            learning_points = f"When attack sophistication exceeds defense capabilities, attacks can succeed. This shows why continuous security updates and strong defenses are critical in V2X systems."
+            impact_description = f"Атака прошла. Целевые автомобили могли получить ложную информацию, влияющую на их решения."
+            learning_points = f"Когда сложность атаки превышает возможности защиты, атака может пройти. Это показывает, почему критически важны постоянные обновления безопасности в V2X."
         
         outcome = AttackOutcome(
             id=outcome_id,

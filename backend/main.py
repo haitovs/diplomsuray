@@ -72,26 +72,26 @@ async def get_presets():
         "scenarios": [
             {
                 "id": "normal",
-                "name": "Normal Traffic",
-                "description": "Regular traffic flow without attacks",
+                "name": "Обычный трафик",
+                "description": "Обычное дорожное движение без атак",
                 "params": {"global_speed_multiplier": 1.0, "detection_sensitivity": 0.7}
             },
             {
                 "id": "heavy",
-                "name": "Heavy Traffic",
-                "description": "Dense traffic with many V2V interactions",
+                "name": "Интенсивное движение",
+                "description": "Плотный трафик с большим количеством V2V-связей",
                 "params": {"global_speed_multiplier": 0.5, "communication_range": 0.008}
             },
             {
                 "id": "highspeed",
-                "name": "Highway Mode",
-                "description": "High-speed traffic simulation",
+                "name": "Режим шоссе",
+                "description": "Высокоскоростное движение",
                 "params": {"global_speed_multiplier": 2.0, "detection_sensitivity": 0.5}
             },
             {
                 "id": "attack_demo",
-                "name": "Attack Demo",
-                "description": "Pre-configured attack scenario",
+                "name": "Демо-атака",
+                "description": "Готовый сценарий атаки Сивиллы",
                 "params": {"detection_sensitivity": 0.9},
                 "attack": "sybil"
             }

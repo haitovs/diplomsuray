@@ -197,6 +197,7 @@ function App() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [showParams, setShowParams] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(true)
   const [presets, setPresets] = useState<Preset[]>([])
   const [activeAlerts, setActiveAlerts] = useState<Anomaly[]>([])
   const [logTab, setLogTab] = useState<'attacks' | 'defenses' | 'outcomes'>('attacks')
@@ -633,10 +634,79 @@ function App() {
   return (
     <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden font-sans">
 
+      {/* Welcome Screen */}
+      {showWelcome && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/95 backdrop-blur-md p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-8 shadow-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <Shield className="w-10 h-10 text-emerald-500" />
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                  Симулятор безопасности V2X
+                </h1>
+                <p className="text-sm text-slate-400">Vehicle-to-Everything Security Simulation</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 rounded-xl p-5 mb-6 border border-slate-700/50">
+              <h3 className="text-sm font-bold text-emerald-400 mb-2">🚗 Что такое V2X?</h3>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                <strong>V2X (Vehicle-to-Everything)</strong> — это технология, позволяющая автомобилям обмениваться данными
+                друг с другом и с инфраструктурой (светофоры, дорожные знаки). Это помогает избежать аварий и оптимизировать
+                движение. Но эта связь может быть атакована злоумышленниками.
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-sm font-bold text-emerald-400 mb-3">📋 Как пользоваться:</h3>
+              <div className="space-y-3">
+                <div className="flex gap-3 items-start">
+                  <div className="flex-shrink-0 w-8 h-8 bg-emerald-500/20 border border-emerald-500/30 rounded-lg flex items-center justify-center text-emerald-400 font-bold text-sm">1</div>
+                  <div>
+                    <div className="text-sm font-medium text-white">Запустите симуляцию</div>
+                    <div className="text-xs text-slate-400">Нажмите кнопку «Старт» на левой панели управления</div>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <div className="flex-shrink-0 w-8 h-8 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center justify-center text-red-400 font-bold text-sm">2</div>
+                  <div>
+                    <div className="text-sm font-medium text-white">Запустите кибер-атаку</div>
+                    <div className="text-xs text-slate-400">Выберите тип атаки (Sybil, Replay или Bogus) в разделе «Кибер-атаки»</div>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center justify-center text-blue-400 font-bold text-sm">3</div>
+                  <div>
+                    <div className="text-sm font-medium text-white">Наблюдайте за защитой</div>
+                    <div className="text-xs text-slate-400">Смотрите, как система IDS (Система обнаружения вторжений) выявляет и блокирует атаки в правой панели</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/30 rounded-lg p-3 mb-6 border border-slate-700/30">
+              <div className="flex items-center gap-4 text-xs text-slate-400">
+                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-blue-500 rounded-sm" /> Легковые авто</div>
+                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-500 rounded-sm" /> Грузовики</div>
+                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-red-500 rounded-sm" /> Хакер (атакующий)</div>
+                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-yellow-500 rounded-full" /> Светофор</div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowWelcome(false)}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-emerald-900/30"
+            >
+              🚀 Начать работу с симулятором
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Help Modal */}
       {showHelp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative">
             <button
               onClick={() => setShowHelp(false)}
               className="absolute top-4 right-4 p-2 hover:bg-slate-800 rounded-full transition-colors"
@@ -646,44 +716,76 @@ function App() {
 
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-emerald-400">
               <HelpCircle className="w-8 h-8" />
-              Как пользоваться симулятором?
+              Справка по симулятору
             </h2>
 
-            <div className="space-y-6 overflow-y-auto max-h-[70vh] pr-2">
+            <div className="space-y-5 overflow-y-auto max-h-[70vh] pr-2 custom-scrollbar">
               <section>
-                <h3 className="text-lg font-semibold text-white mb-2">🚗 Что происходит на карте?</h3>
-                <p className="text-slate-400 leading-relaxed">
-                  Вы видите симуляцию движения автомобилей по дорогам.
-                  <br />
-                  <span className="text-blue-400 font-bold">Синие</span> — Легковые авто.
-                  <br />
-                  <span className="text-green-400 font-bold">Зеленые</span> — Грузовики.
-                  <br />
-                  <span className="text-red-500 font-bold">Красная</span> — Хакер.
+                <h3 className="text-base font-semibold text-white mb-2">🚗 Что происходит на карте?</h3>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Симуляция показывает автомобили, которые обмениваются данными через технологию <strong className="text-emerald-400">V2X</strong> (Vehicle-to-Everything).
+                  Машины передают друг другу информацию о скорости, местоположении и дорожной обстановке.
+                </p>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div className="flex items-center gap-2 text-sm"><div className="w-3 h-3 bg-blue-500 rounded-sm" /> <span className="text-slate-300">Легковые авто</span></div>
+                  <div className="flex items-center gap-2 text-sm"><div className="w-3 h-3 bg-green-500 rounded-sm" /> <span className="text-slate-300">Грузовики</span></div>
+                  <div className="flex items-center gap-2 text-sm"><div className="w-3 h-3 bg-red-500 rounded-sm" /> <span className="text-red-400 font-bold">Хакер (атакующий)</span></div>
+                  <div className="flex items-center gap-2 text-sm"><div className="w-3 h-3 bg-yellow-500 rounded-full" /> <span className="text-slate-300">Светофор</span></div>
+                </div>
+              </section>
+
+              <div className="border-t border-slate-800" />
+
+              <section>
+                <h3 className="text-base font-semibold text-white mb-3">⚔️ Типы кибер-атак</h3>
+                <div className="space-y-3">
+                  <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-3">
+                    <div className="font-bold text-red-300 text-sm mb-1">🎭 Атака Сивиллы (Sybil Attack)</div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Атакующий создаёт множество фейковых машин в сети.
+                      <br />
+                      <span className="text-slate-400 italic">Аналогия: как создание сотен фейковых аккаунтов в соцсетях для искусственного продвижения.</span>
+                    </p>
+                  </div>
+                  <div className="bg-orange-500/5 border border-orange-500/20 rounded-lg p-3">
+                    <div className="font-bold text-orange-300 text-sm mb-1">🔁 Повторная атака (Replay Attack)</div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Перехват и повторная отправка ранее записанных сообщений.
+                      <br />
+                      <span className="text-slate-400 italic">Аналогия: как повторное использование старого чека для получения повторной скидки.</span>
+                    </p>
+                  </div>
+                  <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3">
+                    <div className="font-bold text-yellow-300 text-sm mb-1">📡 Ложные данные (Bogus Information)</div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Отправка ложных данных о скорости или положении автомобиля.
+                      <br />
+                      <span className="text-slate-400 italic">Аналогия: как распространение фейковых новостей — они выглядят правдоподобно, но вводят в заблуждение.</span>
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <div className="border-t border-slate-800" />
+
+              <section>
+                <h3 className="text-base font-semibold text-white mb-2">🛡️ Система защиты (IDS)</h3>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  <strong className="text-blue-400">IDS</strong> (Intrusion Detection System / Система обнаружения вторжений) — автоматически
+                  анализирует сообщения в сети V2X и выявляет подозрительную активность. В правой панели
+                  «Журнал атак и защиты» можно наблюдать за процессом обнаружения и блокирования атак в реальном времени.
                 </p>
               </section>
 
-              <section>
-                <h3 className="text-lg font-semibold text-white mb-2">🚦 Светофоры</h3>
-                <p className="text-slate-400 leading-relaxed">
-                  На перекрестках работают светофоры. Машины останавливаются на красный свет.
-                </p>
-              </section>
+              <div className="border-t border-slate-800" />
 
               <section>
-                <h3 className="text-lg font-semibold text-white mb-2">⚔️ Атаки (Attacks)</h3>
-                <p className="text-slate-400 leading-relaxed">
-                  Хакер пытается взломать машины. Вы увидите <b>красную полоску прогресса</b> над хакером. Когда она заполнится, машина-жертва остановится.
-                </p>
-              </section>
-
-              <section>
-                <h3 className="text-lg font-semibold text-white mb-2">🎮 Управление картой</h3>
-                <p className="text-slate-400 leading-relaxed">
-                  - <b>Левая кнопка мыши</b>: Перемещение карты (Pan).
-                  <br />
-                  - <b>Колесико мыши</b>: Масштаб (Zoom).
-                </p>
+                <h3 className="text-base font-semibold text-white mb-2">🎮 Управление картой</h3>
+                <div className="text-sm text-slate-300 space-y-1">
+                  <div>• <strong>Левая кнопка мыши</strong> — перемещение карты</div>
+                  <div>• <strong>Колёсико мыши</strong> — масштабирование</div>
+                  <div>• <strong>Кнопки +/−</strong> — масштаб (справа внизу)</div>
+                </div>
               </section>
             </div>
 
@@ -692,7 +794,7 @@ function App() {
                 onClick={() => setShowHelp(false)}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-medium transition-colors"
               >
-                Понятно! (Got it)
+                Понятно!
               </button>
             </div>
           </div>
@@ -708,9 +810,9 @@ function App() {
               <Shield className="w-8 h-8 text-emerald-500" />
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                  V2X Security
+                  V2X Безопасность
                 </h1>
-                <div className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Simulation Lab</div>
+                <div className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Лаборатория симуляции</div>
               </div>
             </div>
             <button
@@ -725,7 +827,7 @@ function App() {
           {/* Status */}
           <div className="flex items-center gap-2 text-xs bg-slate-950/50 p-2 rounded-lg border border-slate-800">
             <div className={clsx("w-2 h-2 rounded-full animate-pulse", connected ? "bg-emerald-500" : "bg-red-500")} />
-            <span className="font-mono text-slate-400">{connected ? "SYSTEM ONLINE" : "DISCONNECTED"}</span>
+            <span className="font-mono text-slate-400">{connected ? "СИСТЕМА ОНЛАЙН" : "НЕТ ПОДКЛЮЧЕНИЯ"}</span>
             {simulationState?.active_attack && (
               <span className="ml-auto px-2 py-0.5 bg-red-500/20 text-red-200 rounded text-[10px] font-bold border border-red-500/30 animate-pulse">
                 ⚠ ATTACK: {simulationState.active_attack.toUpperCase()}
@@ -738,8 +840,8 @@ function App() {
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
           {/* Controls */}
           <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Activity className="w-3 h-3" /> Simulation Control
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Activity className="w-3 h-3" /> Управление симуляцией
             </h2>
             <div className="flex gap-2 mb-3">
               {!isRunning ? (
@@ -748,7 +850,7 @@ function App() {
                   className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg transition-all shadow-lg shadow-emerald-900/20 font-medium text-sm"
                   title="Start Simulation"
                 >
-                  <Play className="w-4 h-4 fill-current" /> Start
+                  <Play className="w-4 h-4 fill-current" /> Старт
                 </button>
               ) : (
                 <button
@@ -756,25 +858,25 @@ function App() {
                   className="flex-1 flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-lg transition-all shadow-lg shadow-amber-900/20 font-medium text-sm"
                   title="Pause Simulation"
                 >
-                  <Pause className="w-4 h-4 fill-current" /> Pause
+                  <Pause className="w-4 h-4 fill-current" /> Пауза
                 </button>
               )}
               <button
                 onClick={resetSimulation}
-                className="p-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors border border-slate-600"
-                title="Reset Simulation"
+                className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors border border-slate-600 text-xs"
+                title="Сброс симуляции в начальное состояние"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4" /> Сброс
               </button>
               <button
                 onClick={() => setShowParams(!showParams)}
                 className={clsx(
-                  "p-2.5 rounded-lg transition-colors border",
+                  "flex items-center gap-1.5 px-3 py-2.5 rounded-lg transition-colors border text-xs",
                   showParams ? "bg-emerald-600 border-emerald-500 text-white" : "bg-slate-700 border-slate-600 hover:bg-slate-600"
                 )}
-                title="Settings"
+                title="Настройки скорости, чувствительности и дальности связи"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-4 h-4" /> Настройки
               </button>
             </div>
           </div>
@@ -782,12 +884,12 @@ function App() {
           {/* Simulation Parameters */}
           {showParams && (
             <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 animate-in slide-in-from-top-2 duration-200">
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Settings</h2>
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Настройки</h2>
 
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between mb-1">
-                    <label className="text-xs text-slate-300">Speed</label>
+                    <label className="text-xs text-slate-300">Скорость</label>
                     <span className="text-xs font-mono text-emerald-400">{localParams.global_speed_multiplier.toFixed(1)}x</span>
                   </div>
                   <input
@@ -803,7 +905,7 @@ function App() {
 
                 <div>
                   <div className="flex justify-between mb-1">
-                    <label className="text-xs text-slate-300">IDS Sensitivity</label>
+                    <label className="text-xs text-slate-300" title="IDS — Система обнаружения вторжений">Чувствит. IDS ℹ️</label>
                     <span className="text-xs font-mono text-emerald-400">{(localParams.detection_sensitivity * 100).toFixed(0)}%</span>
                   </div>
                   <input
@@ -819,7 +921,7 @@ function App() {
 
                 <div>
                   <div className="flex justify-between mb-1">
-                    <label className="text-xs text-slate-300">V2V Range</label>
+                    <label className="text-xs text-slate-300" title="V2V (Vehicle-to-Vehicle) — дальность связи между автомобилями">Дальность V2V ℹ️</label>
                     <span className="text-xs font-mono text-emerald-400">{(localParams.communication_range * 1000).toFixed(0)}m</span>
                   </div>
                   <input
@@ -838,10 +940,10 @@ function App() {
 
           {/* Presets */}
           <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <MapIcon className="w-3 h-3" /> Map Scenarios
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <MapIcon className="w-3 h-3" /> Сценарии
             </h2>
-            <div className="text-[10px] text-slate-500 mb-2">Pre-configured map layouts and traffic patterns.</div>
+            <div className="text-[11px] text-slate-400 mb-2">Готовые сценарии дорожного движения.</div>
             <div className="grid grid-cols-2 gap-2">
               {presets.map(preset => (
                 <button
@@ -858,14 +960,14 @@ function App() {
 
           {/* Attack Controls */}
           <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Zap className="w-3 h-3" /> Cyber Attacks
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Zap className="w-3 h-3" /> Кибер-атаки
             </h2>
-            <div className="text-[10px] text-slate-500 mb-2">Trigger specific attacks on the current simulation.</div>
+            <div className="text-[11px] text-slate-400 mb-2">Запустите атаку и наблюдайте за реакцией системы защиты.</div>
 
             {/* Sophistication Selector */}
             <div className="mb-3">
-              <div className="text-[10px] text-slate-400 mb-1.5 font-medium">Attack Sophistication:</div>
+              <div className="text-[11px] text-slate-400 mb-1.5 font-medium">Уровень сложности атаки:</div>
               <div className="flex gap-1">
                 {(['low', 'medium', 'high'] as const).map(level => (
                   <button
@@ -891,48 +993,48 @@ function App() {
                 onClick={() => triggerAttack('sybil')}
                 className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-200 p-2.5 rounded-lg text-xs transition-all hover:border-red-500/40 text-left group"
               >
-                <div className="font-bold mb-0.5 group-hover:text-red-100">Sybil Attack</div>
-                <div className="text-[10px] text-red-300/60">Fake identities</div>
+                <div className="font-bold mb-0.5 group-hover:text-red-100">Атака Сивиллы</div>
+                <div className="text-[11px] text-red-300/60">Создание фейковых машин</div>
               </button>
               <button
                 onClick={() => triggerAttack('replay')}
                 className="bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-200 p-2.5 rounded-lg text-xs transition-all hover:border-orange-500/40 text-left group"
               >
-                <div className="font-bold mb-0.5 group-hover:text-orange-100">Replay Attack</div>
-                <div className="text-[10px] text-orange-300/60">Old messages</div>
+                <div className="font-bold mb-0.5 group-hover:text-orange-100">Повторная атака</div>
+                <div className="text-[11px] text-orange-300/60">Повтор старых сообщений</div>
               </button>
               <button
                 onClick={() => triggerAttack('bogus')}
                 className="bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 text-yellow-200 p-2.5 rounded-lg text-xs transition-all hover:border-yellow-500/40 text-left group"
               >
-                <div className="font-bold mb-0.5 group-hover:text-yellow-100">Bogus Info</div>
-                <div className="text-[10px] text-yellow-300/60">Fake speed data</div>
+                <div className="font-bold mb-0.5 group-hover:text-yellow-100">Ложные данные</div>
+                <div className="text-[11px] text-yellow-300/60">Подделка скорости</div>
               </button>
               <button
                 onClick={clearAttack}
                 className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 p-2.5 rounded-lg text-xs transition-all text-center flex items-center justify-center font-medium"
               >
-                Stop Attack
+                Остановить атаку
               </button>
             </div>
           </div>
 
           {/* Stats */}
           <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Activity className="w-3 h-3" /> Live Stats
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Activity className="w-3 h-3" /> Статистика
             </h2>
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
-                <div className="text-xs text-slate-400">Vehicles</div>
+                <div className="text-xs text-slate-400">Машины</div>
                 <div className="text-lg font-mono">{simulationState?.vehicles.length || 0}</div>
               </div>
               <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
-                <div className="text-xs text-slate-400">Step</div>
+                <div className="text-xs text-slate-400">Шаг</div>
                 <div className="text-lg font-mono">{simulationState?.step || 0}</div>
               </div>
               <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
-                <div className="text-xs text-slate-400">V2V</div>
+                <div className="text-xs text-slate-400" title="V2V — связь между автомобилями">V2V связи</div>
                 <div className="text-lg font-mono">{simulationState?.v2v_communications?.length || 0}</div>
               </div>
             </div>
@@ -941,16 +1043,16 @@ function App() {
           {/* Vehicle Details */}
           {selectedVehicle && (
             <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm animate-in slide-in-from-right-2 duration-200">
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                Vehicle: {selectedVehicle.id}
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                Транспорт: {selectedVehicle.id}
               </h2>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Type:</span>
+                  <span className="text-slate-400">Тип:</span>
                   <span className="capitalize">{selectedVehicle.type}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Status:</span>
+                  <span className="text-slate-400">Статус:</span>
                   <span className={clsx(
                     "font-bold",
                     selectedVehicle.status === 'moving' ? "text-emerald-400" :
@@ -960,29 +1062,29 @@ function App() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Destination:</span>
+                  <span className="text-slate-400">Направление:</span>
                   <span className="font-mono">{selectedVehicle.destination}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Speed:</span>
+                  <span className="text-slate-400">Скорость:</span>
                   <span>{selectedVehicle.speed.toFixed(1)} km/h</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Trust:</span>
+                  <span className="text-slate-400" title="Уровень доверия к данному транспортному средству">Доверие:</span>
                   <span>{(selectedVehicle.trust_score * 100).toFixed(0)}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Messages Sent:</span>
+                  <span className="text-slate-400">Отправлено:</span>
                   <span>{selectedVehicle.messages_sent}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Anomalies Detected:</span>
+                  <span className="text-slate-400">Аномалии:</span>
                   <span className="text-red-400">{selectedVehicle.anomalies_detected}</span>
                 </div>
 
                 {/* Editable speed */}
                 <div className="pt-2 border-t border-slate-700 mt-2">
-                  <label className="text-slate-400 block mb-1">Adjust Speed:</label>
+                  <label className="text-slate-400 block mb-1">Регулировка скорости:</label>
                   <input
                     type="range"
                     min="0"
@@ -998,9 +1100,10 @@ function App() {
 
           {/* Alerts */}
           <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm flex-1 flex flex-col min-h-[200px]">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <AlertTriangle className="w-3 h-3" /> Live Alerts (IDS)
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <AlertTriangle className="w-3 h-3" /> Оповещения IDS
             </h2>
+            <div className="text-[11px] text-slate-400 mb-2">Система обнаружения вторжений</div>
             <div className="space-y-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
               {activeAlerts.slice(0, 10).map((alert, idx) => (
                 <div
@@ -1022,7 +1125,7 @@ function App() {
               {activeAlerts.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2 py-8">
                   <Shield className="w-8 h-8 opacity-20" />
-                  <span className="text-xs">System Secure</span>
+                  <span className="text-xs">Система в безопасности</span>
                 </div>
               )}
             </div>
@@ -1034,6 +1137,18 @@ function App() {
       <div className="flex-1 bg-slate-950 relative overflow-hidden flex flex-col">
         {/* Map Canvas */}
         <div className="flex-1 relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 to-slate-950">
+          {/* Context-aware Hint Bar */}
+          <div className="absolute top-0 left-0 right-0 z-10 px-4 py-2 bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 text-center">
+            {!isRunning && !simulationState?.active_attack && (
+              <span className="text-sm text-slate-300">👆 Нажмите <strong className="text-emerald-400">«Старт»</strong> на левой панели, чтобы запустить симуляцию</span>
+            )}
+            {isRunning && !simulationState?.active_attack && (
+              <span className="text-sm text-slate-300">✅ Симуляция запущена. Выберите <strong className="text-red-400">кибер-атаку</strong> слева, чтобы увидеть работу системы защиты</span>
+            )}
+            {simulationState?.active_attack && (
+              <span className="text-sm text-red-300 animate-pulse">⚠️ Атака <strong>{simulationState.active_attack.toUpperCase()}</strong> активна! Наблюдайте за реакцией системы IDS в правой панели</span>
+            )}
+          </div>
           <canvas
             ref={canvasRef}
             className="w-full h-full cursor-move"
@@ -1091,27 +1206,27 @@ function App() {
 
           {/* Legend */}
           <div className="absolute top-4 right-4 bg-slate-900/90 backdrop-blur p-4 rounded-xl text-xs border border-slate-700/50 shadow-xl pointer-events-none">
-            <div className="font-bold text-slate-400 mb-3 uppercase tracking-wider">Legend</div>
+            <div className="font-bold text-slate-400 mb-3 uppercase tracking-wider">Обозначения</div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-blue-500 rounded-sm" />
-                <span>Passenger Car</span>
+                <span>Легковой авто</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-green-500 rounded-sm" />
-                <span>Truck</span>
+                <span>Грузовик</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-red-500 rounded-sm" />
-                <span className="font-bold text-red-400">Attacker (Hacker)</span>
+                <span className="font-bold text-red-400">Хакер (атакующий)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-yellow-500 rounded-full" />
-                <span>Traffic Light</span>
+                <span>Светофор</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-0.5 bg-emerald-500/50" />
-                <span>V2V Connection</span>
+                <span>Связь V2V</span>
               </div>
             </div>
           </div>
@@ -1119,7 +1234,7 @@ function App() {
 
         {/* Bottom vehicle list */}
         <div className="h-40 border-t border-slate-800 bg-slate-900 p-4 overflow-x-auto">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Active Vehicles</h3>
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Активные транспортные средства</h3>
           <div className="flex gap-3">
             {simulationState?.vehicles.map(v => (
               <div
@@ -1135,15 +1250,15 @@ function App() {
               >
                 <div className="flex justify-between items-center mb-2">
                   <div className="font-mono font-bold text-xs">{v.id}</div>
-                  {v.is_attacker && <div className="text-[10px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">HACKER</div>}
+                  {v.is_attacker && <div className="text-[10px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">ХАКЕР</div>}
                 </div>
                 <div className="space-y-1">
                   <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-500">Speed</span>
+                    <span className="text-slate-500">Скорость</span>
                     <span className="font-mono text-emerald-400">{v.speed.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-500">Status</span>
+                    <span className="text-slate-500">Статус</span>
                     <span className={clsx("font-mono", v.status === 'stopped' ? "text-red-400" : "text-blue-400")}>
                       {v.status}
                     </span>
@@ -1161,9 +1276,9 @@ function App() {
         <div className="p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur">
           <h2 className="text-lg font-bold text-emerald-400 flex items-center gap-2">
             <Shield className="w-5 h-5" />
-            Attack/Defense Log
+            Журнал атак и защиты
           </h2>
-          <p className="text-[10px] text-slate-500 mt-1">Educational security monitoring</p>
+          <p className="text-[11px] text-slate-400 mt-1">Мониторинг безопасности в реальном времени</p>
         </div>
 
         {/* Tabs */}
@@ -1175,7 +1290,7 @@ function App() {
               logTab === 'attacks' ? "border-red-500 text-red-300 bg-red-500/5" : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
             )}
           >
-            Attacks ({simulationState?.attack_logs?.length || 0})
+            Атаки ({simulationState?.attack_logs?.length || 0})
           </button>
           <button
             onClick={() => setLogTab('defenses')}
@@ -1184,7 +1299,7 @@ function App() {
               logTab === 'defenses' ? "border-blue-500 text-blue-300 bg-blue-500/5" : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
             )}
           >
-            Defenses ({simulationState?.defense_logs?.length || 0})
+            Защита ({simulationState?.defense_logs?.length || 0})
           </button>
           <button
             onClick={() => setLogTab('outcomes')}
@@ -1193,7 +1308,7 @@ function App() {
               logTab === 'outcomes' ? "border-emerald-500 text-emerald-300 bg-emerald-500/5" : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
             )}
           >
-            Outcomes ({simulationState?.outcome_logs?.length || 0})
+            Результаты ({simulationState?.outcome_logs?.length || 0})
           </button>
         </div>
 
@@ -1255,7 +1370,7 @@ function App() {
                     </div>
                     <details className="mt-2">
                       <summary className="text-[9px] text-emerald-400 cursor-pointer hover:text-emerald-300 select-none">
-                        📚 Learn More
+                        📚 Подробнее
                       </summary>
                       <p className="text-[9px] text-slate-400 mt-1 leading-relaxed pl-4">
                         {attack.educational_context}
@@ -1266,9 +1381,9 @@ function App() {
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2 py-8">
                   <AlertTriangle className="w-8 h-8 opacity-20" />
-                  <span className="text-xs">No attacks detected</span>
-                  <span className="text-[10px] text-center px-4">
-                    Trigger an attack from the left panel to see real-time attack detection
+                  <span className="text-xs">Атаки не обнаружены</span>
+                  <span className="text-[11px] text-center px-4">
+                    Запустите атаку на левой панели, чтобы увидеть обнаружение в реальном времени
                   </span>
                 </div>
               )}
@@ -1315,7 +1430,7 @@ function App() {
                     </div>
                     <details className="mt-2">
                       <summary className="text-[9px] text-blue-400 cursor-pointer hover:text-blue-300 select-none">
-                        📚 How it works
+                        📚 Как это работает
                       </summary>
                       <p className="text-[9px] text-slate-400 mt-1 leading-relaxed pl-4">
                         {defense.explanation}
@@ -1326,9 +1441,9 @@ function App() {
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2 py-8">
                   <Shield className="w-8 h-8 opacity-20" />
-                  <span className="text-xs">No defenses activated</span>
-                  <span className="text-[10px] text-center px-4">
-                    Defense logs appear when attacks are resolved
+                  <span className="text-xs">Защита не активирована</span>
+                  <span className="text-[11px] text-center px-4">
+                    Журнал защиты появится после разрешения атак
                   </span>
                 </div>
               )}
@@ -1350,9 +1465,9 @@ function App() {
                   >
                     <div className="font-bold text-xs mb-1 flex items-center gap-2">
                       {outcome.result === 'blocked' ? (
-                        <span className="text-emerald-400">✓ Attack Blocked</span>
+                        <span className="text-emerald-400">✓ Атака заблокирована</span>
                       ) : (
-                        <span className="text-red-400">✗ Attack Succeeded</span>
+                        <span className="text-red-400">✗ Атака прошла</span>
                       )}
                       <span className="ml-auto text-[9px] text-slate-500 font-normal">
                         {outcome.defenses_triggered} defense{outcome.defenses_triggered !== 1 ? 's' : ''} triggered
@@ -1360,7 +1475,7 @@ function App() {
                     </div>
                     <p className="text-[10px] text-slate-300 mb-2">{outcome.impact_description}</p>
                     <div className="bg-slate-800/50 p-2 rounded text-[9px]">
-                      <div className="text-emerald-400 font-bold mb-1">💡 Learning Point:</div>
+                      <div className="text-emerald-400 font-bold mb-1">💡 Вывод:</div>
                       <div className="text-slate-400 leading-relaxed">{outcome.learning_points}</div>
                     </div>
                   </div>
@@ -1368,9 +1483,9 @@ function App() {
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2 py-8">
                   <Activity className="w-8 h-8 opacity-20" />
-                  <span className="text-xs">No outcomes yet</span>
-                  <span className="text-[10px] text-center px-4">
-                    Outcomes appear after attacks are resolved by defense systems
+                  <span className="text-xs">Результатов пока нет</span>
+                  <span className="text-[11px] text-center px-4">
+                    Результаты появятся после разрешения атак системой защиты
                   </span>
                 </div>
               )}
@@ -1383,17 +1498,17 @@ function App() {
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="bg-red-500/10 p-2 rounded">
               <div className="text-lg font-bold text-red-400">{simulationState?.active_attacks_count || 0}</div>
-              <div className="text-[9px] text-slate-500">Active</div>
+              <div className="text-[9px] text-slate-500">Активные</div>
             </div>
             <div className="bg-blue-500/10 p-2 rounded">
               <div className="text-lg font-bold text-blue-400">{simulationState?.defense_logs?.filter(d => d.success).length || 0}</div>
-              <div className="text-[9px] text-slate-500">Blocked</div>
+              <div className="text-[9px] text-slate-500">Заблокир.</div>
             </div>
             <div className="bg-emerald-500/10 p-2 rounded">
               <div className="text-lg font-bold text-emerald-400">
                 {simulationState?.outcome_logs?.filter(o => o.result === 'blocked').length || 0}
               </div>
-              <div className="text-[9px] text-slate-500">Success</div>
+              <div className="text-[9px] text-slate-500">Успешно</div>
             </div>
           </div>
         </div>

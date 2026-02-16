@@ -186,6 +186,10 @@ interface Particle {
   color: string
 }
 
+// Dynamic API base URLs for production deployment
+const API_BASE = `${window.location.origin}/api`
+const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws`
+
 function App() {
   const [connected, setConnected] = useState(false)
   const [simulationState, setSimulationState] = useState<SimulationState | null>(null)
@@ -237,7 +241,7 @@ function App() {
 
   const loadPresets = async () => {
     try {
-      const res = await fetch('http://localhost:8000/presets')
+      const res = await fetch(`${API_BASE}/presets`)
       const data = await res.json()
       setPresets(data.scenarios || [])
     } catch (e) {
@@ -246,7 +250,7 @@ function App() {
   }
 
   const connectWebSocket = () => {
-    const ws = new WebSocket('ws://localhost:8000/ws')
+    const ws = new WebSocket(WS_URL)
     ws.onopen = () => {
       console.log('Connected to WebSocket')
       setConnected(true)
@@ -286,17 +290,17 @@ function App() {
   }
 
   const startSimulation = async () => {
-    await apiFetch('http://localhost:8000/control/start', { method: 'POST' })
+    await apiFetch(`${API_BASE}/control/start`, { method: 'POST' })
     setIsRunning(true)
   }
 
   const stopSimulation = async () => {
-    await apiFetch('http://localhost:8000/control/stop', { method: 'POST' })
+    await apiFetch(`${API_BASE}/control/stop`, { method: 'POST' })
     setIsRunning(false)
   }
 
   const resetSimulation = async () => {
-    await apiFetch('http://localhost:8000/control/reset', { method: 'POST' })
+    await apiFetch(`${API_BASE}/control/reset`, { method: 'POST' })
     setIsRunning(false)
     setSimulationState(null)
     setActiveAlerts([])
@@ -312,7 +316,7 @@ function App() {
       'gps_spoof': 'gps_spoofing'
     }
     const backendAttackType = attackTypeMap[type] || type
-    await apiFetch('http://localhost:8000/control/attack', {
+    await apiFetch(`${API_BASE}/control/attack`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: backendAttackType, sophistication: attackSophistication })
@@ -320,7 +324,7 @@ function App() {
   }
 
   const clearAttack = async () => {
-    await apiFetch('http://localhost:8000/control/attack', {
+    await apiFetch(`${API_BASE}/control/attack`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: null, sophistication: 'medium' })
@@ -329,7 +333,7 @@ function App() {
 
   const updateParams = async (params: Partial<SimulationState['params']>) => {
     setLocalParams(prev => ({ ...prev, ...params }))
-    await apiFetch('http://localhost:8000/control/params', {
+    await apiFetch(`${API_BASE}/control/params`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ params })
@@ -337,7 +341,7 @@ function App() {
   }
 
   const updateVehicle = async (vehicleId: string, updates: Partial<Vehicle>) => {
-    await apiFetch('http://localhost:8000/control/vehicle', {
+    await apiFetch(`${API_BASE}/control/vehicle`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ vehicle_id: vehicleId, updates })
@@ -345,7 +349,7 @@ function App() {
   }
 
   const loadPreset = async (presetId: string) => {
-    await apiFetch(`http://localhost:8000/presets/${presetId}`, { method: 'POST' })
+    await apiFetch(`${API_BASE}/presets/${presetId}`, { method: 'POST' })
   }
 
   const project = (lat: number, lon: number, bounds: any, width: number, height: number) => {

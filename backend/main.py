@@ -3,7 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
 import json
-from simulation import SimulationEngine
+try:
+    from simulation import SimulationEngine
+except ImportError:
+    from backend.simulation import SimulationEngine
 
 app = FastAPI()
 

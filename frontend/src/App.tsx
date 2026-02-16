@@ -1,6 +1,7 @@
 import { clsx } from 'clsx'
-import { Activity, AlertTriangle, HelpCircle, Map as MapIcon, Move, Pause, Play, RotateCcw, Settings, Shield, X, Zap, ZoomIn, ZoomOut } from 'lucide-react'
+import { Activity, AlertTriangle, HelpCircle, Map as MapIcon, Pause, Play, RotateCcw, Settings, Shield, X, Zap } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import MapView from './MapView'
 
 // Types
 interface Vehicle {
@@ -22,6 +23,7 @@ interface Vehicle {
   hack_progress?: number
   target_vehicle?: string | null
   waiting_at_light?: boolean
+  defense_level?: string
 }
 
 interface Message {
@@ -170,20 +172,17 @@ interface SimulationState {
 
 
 // SVG Paths for Icons (Oriented Right -> 0 degrees)
-const ICONS = {
-  car: new Path2D("M-10,-6 L5,-6 L8,-3 L8,3 L5,6 L-10,6 L-11,3 L-11,-3 Z M-6,-4 L2,-4 L4,-2 L4,2 L2,4 L-6,4 Z"),
-  truck: new Path2D("M-14,-7 L10,-7 L10,7 L-14,7 Z M11,-6 L14,-6 L14,6 L11,6 Z M-10,-5 L6,-5 L6,5 L-10,5 Z"),
-  hacker: new Path2D("M-10,-6 L5,-6 L8,-3 L8,3 L5,6 L-10,6 L-11,3 L-11,-3 Z M-4,-2 L2,-2 L2,2 L-4,2 Z"),
+// Defense level labels for UI
+const DEFENSE_LEVEL_RU: Record<string, string> = {
+  low: 'Низкий',
+  medium: 'Средний',
+  high: 'Высокий',
 }
 
-// Particle System
-interface Particle {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  life: number
-  color: string
+const DEFENSE_LEVEL_COLOR: Record<string, string> = {
+  low: 'text-red-400',
+  medium: 'text-yellow-400',
+  high: 'text-emerald-400',
 }
 
 // Dynamic API base URLs for production deployment
@@ -219,14 +218,7 @@ function App() {
   const [logTab, setLogTab] = useState<'attacks' | 'defenses' | 'outcomes'>('attacks')
   const [attackSophistication, setAttackSophistication] = useState<'low' | 'medium' | 'high'>('medium')
 
-  // Viewport State (Pan/Zoom)
-  const [viewState, setViewState] = useState({ x: 0, y: 0, zoom: 1.8 })
-  const [isDragging, setIsDragging] = useState(false)
-  const lastMousePos = useRef({ x: 0, y: 0 })
-
   const wsRef = useRef<WebSocket | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const particlesRef = useRef<Particle[]>([])
   const reconnectAttemptRef = useRef(0)
 
   // Default params
@@ -321,7 +313,6 @@ function App() {
     setIsRunning(false)
     setSimulationState(null)
     setActiveAlerts([])
-    particlesRef.current = []
   }
 
   const triggerAttack = async (type: string) => {
@@ -368,344 +359,6 @@ function App() {
   const loadPreset = async (presetId: string) => {
     await apiFetch(`${API_BASE}/presets/${presetId}`, { method: 'POST' })
   }
-
-  const project = (lat: number, lon: number, bounds: any, width: number, height: number) => {
-    if (!bounds) return { x: 0, y: 0 }
-    const x = ((lon - bounds.lon_min) / (bounds.lon_max - bounds.lon_min)) * width
-    const y = height - ((lat - bounds.lat_min) / (bounds.lat_max - bounds.lat_min)) * height
-    return { x, y }
-  }
-
-  // Canvas Event Handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true)
-    lastMousePos.current = { x: e.clientX, y: e.clientY }
-  }
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      const dx = e.clientX - lastMousePos.current.x
-      const dy = e.clientY - lastMousePos.current.y
-      setViewState(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }))
-      lastMousePos.current = { x: e.clientX, y: e.clientY }
-    }
-  }
-
-  const handleMouseUp = () => {
-    setIsDragging(false)
-  }
-
-  const handleWheel = (e: React.WheelEvent) => {
-    const scaleFactor = 1.1
-    const direction = e.deltaY > 0 ? 1 / scaleFactor : scaleFactor
-    setViewState(prev => ({ ...prev, zoom: Math.max(0.5, Math.min(5, prev.zoom * direction)) }))
-  }
-
-  // Draw map on canvas
-  useEffect(() => {
-    if (!canvasRef.current) return
-
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    // Responsive canvas resolution
-    const rect = canvas.getBoundingClientRect()
-    const dpr = window.devicePixelRatio || 1
-    canvas.width = rect.width * dpr
-    canvas.height = rect.height * dpr
-    ctx.scale(dpr, dpr)
-
-    const width = rect.width
-    const height = rect.height
-
-    // Clear
-    ctx.fillStyle = '#0f172a'
-    ctx.fillRect(0, 0, width, height)
-
-    ctx.save()
-
-    // Apply Viewport Transform
-    ctx.translate(width / 2 + viewState.x, height / 2 + viewState.y)
-    ctx.scale(viewState.zoom, viewState.zoom)
-    ctx.translate(-width / 2, -height / 2)
-
-    // Draw Background Buildings (Decor)
-    if (simulationState) {
-      ctx.fillStyle = '#1e293b'
-      // Simple grid of "buildings"
-      for (let i = 0; i < 10; i++) {
-        for (let j = 0; j < 10; j++) {
-          ctx.fillRect(i * 120 + 20, j * 80 + 20, 80, 50)
-        }
-      }
-    }
-
-    if (simulationState?.roads) {
-      // Draw Roads
-      ctx.strokeStyle = '#334155'
-      ctx.lineWidth = 14
-      ctx.lineCap = 'round'
-
-      simulationState.roads.edges.forEach(([startId, endId]) => {
-        const startNode = simulationState.roads.nodes[startId]
-        const endNode = simulationState.roads.nodes[endId]
-
-        if (startNode && endNode) {
-          const p1 = project(startNode[0], startNode[1], simulationState.bounds, width, height)
-          const p2 = project(endNode[0], endNode[1], simulationState.bounds, width, height)
-
-          ctx.beginPath()
-          ctx.moveTo(p1.x, p1.y)
-          ctx.lineTo(p2.x, p2.y)
-          ctx.stroke()
-
-          // Road markings
-          ctx.save()
-          ctx.strokeStyle = '#475569'
-          ctx.lineWidth = 1
-          ctx.setLineDash([8, 8])
-          ctx.beginPath()
-          ctx.moveTo(p1.x, p1.y)
-          ctx.lineTo(p2.x, p2.y)
-          ctx.stroke()
-          ctx.restore()
-        }
-      })
-
-      // Draw Traffic Lights
-      if (simulationState.roads.lights) {
-        Object.entries(simulationState.roads.lights).forEach(([nodeId, light]) => {
-          const pos = simulationState.roads.nodes[nodeId]
-          if (pos) {
-            const p = project(pos[0], pos[1], simulationState.bounds, width, height)
-
-            // Traffic Light Box
-            ctx.fillStyle = '#000'
-            ctx.fillRect(p.x - 6, p.y - 12, 12, 24)
-
-            // Red Light
-            ctx.fillStyle = light.state === 'red' ? '#ef4444' : '#450a0a'
-            ctx.beginPath()
-            ctx.arc(p.x, p.y - 6, 4, 0, Math.PI * 2)
-            ctx.fill()
-            // Glow if red
-            if (light.state === 'red') {
-              ctx.shadowColor = '#ef4444'
-              ctx.shadowBlur = 10
-              ctx.fill()
-              ctx.shadowBlur = 0
-            }
-
-            // Green Light
-            ctx.fillStyle = light.state === 'green' ? '#10b981' : '#064e3b'
-            ctx.beginPath()
-            ctx.arc(p.x, p.y + 6, 4, 0, Math.PI * 2)
-            ctx.fill()
-            // Glow if green
-            if (light.state === 'green') {
-              ctx.shadowColor = '#10b981'
-              ctx.shadowBlur = 10
-              ctx.fill()
-              ctx.shadowBlur = 0
-            }
-          }
-        })
-      }
-    }
-
-    // Draw Particles
-    particlesRef.current.forEach((p, i) => {
-      p.x += p.vx
-      p.y += p.vy
-      p.life -= 0.05
-      if (p.life <= 0) {
-        particlesRef.current.splice(i, 1)
-      } else {
-        ctx.fillStyle = p.color
-        ctx.globalAlpha = p.life
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.globalAlpha = 1
-      }
-    })
-
-    // V2V lines hidden for clarity (too cluttered)
-    // Uncomment to show: if (simulationState?.v2v_communications) { ... }
-
-    // Draw vehicles
-    simulationState?.vehicles.forEach(v => {
-      const pos = project(v.lat, v.lon, simulationState.bounds, width, height)
-
-      // Add particles if moving
-      if (v.status === 'moving' && Math.random() < 0.3) {
-        particlesRef.current.push({
-          x: pos.x,
-          y: pos.y,
-          vx: (Math.random() - 0.5) * 0.5,
-          vy: (Math.random() - 0.5) * 0.5,
-          life: 1.0,
-          color: '#94a3b8'
-        })
-      }
-
-      ctx.save()
-      ctx.translate(pos.x, pos.y)
-      // Rotate 90 degrees to match SVG orientation (Right is 0)
-      // Heading is 0=North, 90=East. 
-      // Canvas 0=Right (East). 
-      // So if heading is 0 (North), we want -90 deg rotation?
-      // Actually: Heading 0 (North) -> needs to point Up.
-      // SVG points Right. So rotate -90 deg (-PI/2).
-      // Let's try: ctx.rotate((v.heading * Math.PI / 180) - Math.PI / 2)
-      ctx.rotate((v.heading * Math.PI) / 180 - Math.PI / 2)
-
-      let color = '#3b82f6'
-      if (v.is_attacker) color = '#ef4444'
-      else if (v.type === 'emergency') color = '#f59e0b'
-      else if (v.type === 'truck') color = '#10b981'
-      else if (v.type === 'bus') color = '#8b5cf6'
-
-      if (v.is_attacker && simulationState.active_attack) {
-        const pulse = Math.sin(Date.now() / 200) * 5 + 15
-        ctx.shadowBlur = pulse
-        ctx.shadowColor = color
-      }
-
-      ctx.fillStyle = color
-      ctx.scale(2.5, 2.5)
-
-      if (v.type === 'truck' || v.type === 'bus') {
-        ctx.fill(ICONS.truck)
-      } else if (v.is_attacker) {
-        ctx.fill(ICONS.hacker)
-      } else {
-        ctx.fill(ICONS.car)
-      }
-
-      if (v.is_attacker) {
-        ctx.fillStyle = '#fff'
-        ctx.font = 'bold 8px sans-serif'
-        ctx.fillText('!', -1, 3)
-      }
-
-      ctx.restore()
-
-      // Status Indicators (Non-rotated)
-      if (v.status === 'stopped') {
-        ctx.strokeStyle = '#ef4444'
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.moveTo(pos.x - 6, pos.y - 6)
-        ctx.lineTo(pos.x + 6, pos.y + 6)
-        ctx.moveTo(pos.x + 6, pos.y - 6)
-        ctx.lineTo(pos.x - 6, pos.y + 6)
-        ctx.stroke()
-      }
-
-      if (v.waiting_at_light) {
-        ctx.fillStyle = '#fbbf24'
-        ctx.beginPath()
-        ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2)
-        ctx.fill()
-      }
-
-      // Hacking Progress Bar (bigger, with label)
-      if (v.is_attacker && v.hack_progress && v.hack_progress > 0) {
-        const barW = 50
-        const barH = 8
-        ctx.fillStyle = '#334155'
-        ctx.fillRect(pos.x - barW/2, pos.y - 30, barW, barH)
-        ctx.fillStyle = '#ef4444'
-        ctx.fillRect(pos.x - barW/2, pos.y - 30, barW * (v.hack_progress / 100), barH)
-        ctx.strokeStyle = '#ef4444'
-        ctx.lineWidth = 1
-        ctx.strokeRect(pos.x - barW/2, pos.y - 30, barW, barH)
-        // Label
-        ctx.fillStyle = '#fca5a5'
-        ctx.font = 'bold 10px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.fillText(`АТАКА ${Math.round(v.hack_progress)}%`, pos.x, pos.y - 34)
-        ctx.textAlign = 'start'
-      }
-
-      // Stopped vehicle label
-      if (v.status === 'stopped' && !v.is_attacker) {
-        ctx.fillStyle = '#ef4444'
-        ctx.font = 'bold 11px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.fillText('ОСТАНОВЛЕН', pos.x, pos.y + 22)
-        ctx.textAlign = 'start'
-      }
-
-      // Pulsing attack ring around hacker when actively attacking
-      if (v.is_attacker && simulationState?.active_attack) {
-        const pulse = (Math.sin(Date.now() / 200) + 1) / 2 // 0-1 pulse
-        const radius = 20 + pulse * 15
-        ctx.strokeStyle = `rgba(239, 68, 68, ${0.3 + pulse * 0.4})`
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
-        ctx.stroke()
-
-        // Draw attack line to nearest non-attacker vehicle
-        const targets = simulationState.vehicles.filter(t => !t.is_attacker)
-        if (targets.length > 0) {
-          const nearest = targets.reduce((best, t) => {
-            const tPos = project(t.lat, t.lon, simulationState.bounds, width, height)
-            const dist = Math.hypot(tPos.x - pos.x, tPos.y - pos.y)
-            const bestPos = project(best.lat, best.lon, simulationState.bounds, width, height)
-            const bestDist = Math.hypot(bestPos.x - pos.x, bestPos.y - pos.y)
-            return dist < bestDist ? t : best
-          })
-          const nearPos = project(nearest.lat, nearest.lon, simulationState.bounds, width, height)
-          
-          // Dashed red line
-          ctx.strokeStyle = `rgba(239, 68, 68, ${0.4 + pulse * 0.3})`
-          ctx.lineWidth = 2
-          ctx.setLineDash([6, 4])
-          ctx.beginPath()
-          ctx.moveTo(pos.x, pos.y)
-          ctx.lineTo(nearPos.x, nearPos.y)
-          ctx.stroke()
-          ctx.setLineDash([])
-
-          // "АТАКА →" label at midpoint
-          const midX = (pos.x + nearPos.x) / 2
-          const midY = (pos.y + nearPos.y) / 2
-          ctx.fillStyle = '#fca5a5'
-          ctx.font = 'bold 9px sans-serif'
-          ctx.textAlign = 'center'
-          ctx.fillText('АТАКА →', midX, midY - 5)
-          ctx.textAlign = 'start'
-        }
-      }
-
-      // Vehicle type label
-      ctx.font = 'bold 8px sans-serif'
-      ctx.textAlign = 'center'
-      if (v.is_attacker) {
-        ctx.fillStyle = '#fca5a5'
-        ctx.fillText('ХАКЕР', pos.x, pos.y + (v.status === 'stopped' ? 32 : 18))
-      } else if (v.type === 'truck' || v.type === 'bus') {
-        ctx.fillStyle = '#86efac'
-        ctx.fillText('Грузовик', pos.x, pos.y + (v.status === 'stopped' ? 32 : 18))
-      } else {
-        ctx.fillStyle = '#93c5fd'
-        ctx.fillText('Авто', pos.x, pos.y + (v.status === 'stopped' ? 32 : 18))
-      }
-      ctx.textAlign = 'start'
-
-      // Vehicle ID
-      ctx.fillStyle = '#e2e8f0'
-      ctx.font = 'bold 10px monospace'
-      ctx.fillText(v.id, pos.x - 12, pos.y - 28)
-
-    })
-
-    ctx.restore()
-  }, [simulationState, viewState])
 
   return (
     <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden font-sans">
@@ -1259,80 +912,38 @@ function App() {
               </div>
             )}
           </div>
-          <canvas
-            ref={canvasRef}
-            className="w-full h-full cursor-move"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
-            onClick={(e) => {
-              if (!simulationState || !canvasRef.current || isDragging) return
-              const rect = canvasRef.current.getBoundingClientRect()
-              const cssX = e.clientX - rect.left
-              const cssY = e.clientY - rect.top
-              const width = rect.width
-              const height = rect.height
-
-              // Transform click from CSS -> world (undo pan/zoom)
-              const worldX = (cssX - width / 2 - viewState.x) / viewState.zoom + width / 2
-              const worldY = (cssY - height / 2 - viewState.y) / viewState.zoom + height / 2
-
-              for (const v of simulationState.vehicles) {
-                const pos = project(v.lat, v.lon, simulationState.bounds, width, height)
-                const dist = Math.sqrt((pos.x - worldX) ** 2 + (pos.y - worldY) ** 2)
-                if (dist < 20) {
-                  setSelectedVehicle(v)
-                  return
-                }
-              }
-              setSelectedVehicle(null)
-            }}
+          <MapView
+            simulationState={simulationState}
+            selectedVehicle={selectedVehicle}
+            onSelectVehicle={setSelectedVehicle}
           />
 
-          {/* Zoom Controls */}
-          <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-            <button
-              onClick={() => setViewState(prev => ({ ...prev, zoom: Math.min(5, prev.zoom * 1.2) }))}
-              className="p-2 bg-slate-800/90 backdrop-blur hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 shadow-xl"
-            >
-              <ZoomIn className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setViewState(prev => ({ ...prev, zoom: Math.max(0.5, prev.zoom / 1.2) }))}
-              className="p-2 bg-slate-800/90 backdrop-blur hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 shadow-xl"
-            >
-              <ZoomOut className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setViewState({ x: 0, y: 0, zoom: 1 })}
-              className="p-2 bg-slate-800/90 backdrop-blur hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 shadow-xl"
-              title="Сбросить вид"
-            >
-              <Move className="w-5 h-5" />
-            </button>
-          </div>
-
           {/* Legend */}
-          <div className="absolute top-4 right-4 bg-slate-900/90 backdrop-blur p-4 rounded-xl text-xs border border-slate-700/50 shadow-xl pointer-events-none">
+          <div className="absolute top-4 right-4 bg-slate-900/90 backdrop-blur p-4 rounded-xl text-xs border border-slate-700/50 shadow-xl pointer-events-none z-[500]">
             <div className="font-bold text-slate-400 mb-3 uppercase tracking-wider">Обозначения</div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-sm" />
+                <div className="w-3 h-3 bg-blue-500 rounded-full" />
                 <span>Легковой авто</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-sm" />
+                <div className="w-3 h-3 bg-green-500 rounded-full" />
                 <span>Грузовик</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-sm" />
+                <div className="w-3 h-3 bg-red-500 rounded-full" />
                 <span className="font-bold text-red-400">Хакер (атакующий)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-yellow-500 rounded-full" />
                 <span>Светофор</span>
+              </div>
+              <div className="border-t border-slate-700 my-2" />
+              <div className="font-bold text-slate-400 mb-1">Уровни защиты:</div>
+              <div className="flex items-center gap-2">
+                <span className="text-red-400">🛡️ НИЗ</span>
+                <span className="text-yellow-400">🛡️🛡️ СРЕ</span>
+                <span className="text-emerald-400">🛡️🛡🛡 ВЫС</span>
               </div>
             </div>
           </div>
@@ -1369,6 +980,14 @@ function App() {
                       {STATUS_RU[v.status] || v.status}
                     </span>
                   </div>
+                  {v.defense_level && !v.is_attacker && (
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-slate-500">Защита</span>
+                      <span className={clsx("font-mono", DEFENSE_LEVEL_COLOR[v.defense_level] || 'text-yellow-400')}>
+                        🛡️ {DEFENSE_LEVEL_RU[v.defense_level] || v.defense_level}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

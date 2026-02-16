@@ -14,6 +14,20 @@ VEHICLE_TYPES = {
     "bus": {"max_speed": 80, "acceleration": 2, "color": "orange", "trust": 0.88, "icon": "bus"},
 }
 
+# Defense level multipliers: how much they slow down hacking
+DEFENSE_LEVELS = {
+    "low":    {"name": "Низкий",  "hack_multiplier": 1.5, "resist_chance": 0.0,  "defense_bonus": 0.7},
+    "medium": {"name": "Средний", "hack_multiplier": 1.0, "resist_chance": 0.15, "defense_bonus": 1.0},
+    "high":   {"name": "Высокий", "hack_multiplier": 0.35, "resist_chance": 0.4,  "defense_bonus": 1.5},
+}
+
+# Attack sophistication multipliers for hack speed
+ATTACK_SPEED_MULTIPLIERS = {
+    "low":    0.6,
+    "medium": 1.0,
+    "high":   1.8,
+}
+
 # ===== REALISTIC V2X ATTACK TYPES =====
 ATTACK_TYPES = {
     "position_falsification": {
@@ -424,6 +438,15 @@ class SimulationEngine:
             
             pos = self.road_graph.nodes[start_node]["pos"]
             
+            # Assign defense level: weighted random (more medium, fewer high)
+            defense_roll = random.random()
+            if defense_roll < 0.3:
+                defense_level = "low"
+            elif defense_roll < 0.75:
+                defense_level = "medium"
+            else:
+                defense_level = "high"
+
             vehicles.append({
                 "id": f"v_{i}",
                 "type": vtype,
@@ -435,6 +458,7 @@ class SimulationEngine:
                 "is_attacker": False,
                 "max_speed": config["max_speed"],
                 "color": config["color"],
+                "defense_level": defense_level,
                 "messages_sent": 0,
                 "messages_received": 0,
                 "anomalies_detected": 0,
@@ -457,6 +481,7 @@ class SimulationEngine:
                 vehicles[i]["trust_score"] = 0.3
                 vehicles[i]["color"] = "red"
                 vehicles[i]["type"] = "hacker"
+                vehicles[i]["defense_level"] = "high"  # Hacker has high self-defense
             
         return vehicles
 
@@ -514,6 +539,7 @@ class SimulationEngine:
                     # Schedule attack resolution after some time
                     attack_state = self.active_attacks[attack_id]
                     attack_state["resolution_step"] = self.step_count + random.randint(30, 60)  # 3-6 seconds
+                    attack_state["repeat_interval"] = random.randint(40, 80)  # Re-attack interval
 
 
     def update_params(self, params):
@@ -588,6 +614,19 @@ class SimulationEngine:
         sophistication = attack_log.sophistication
         bypass_chance = attack_info["sophistication_levels"][sophistication]["bypass_chance"]
         
+        # Find target vehicles to include in logs
+        target_ids = attack_log.target_ids
+        target_vehicles = [v for v in self.vehicles if v["id"] in target_ids]
+        
+        # Determine average target defense level for log context
+        avg_defense = "medium"
+        if target_vehicles:
+            defense_counts = {"low": 0, "medium": 0, "high": 0}
+            for tv in target_vehicles:
+                dl = tv.get("defense_level", "medium")
+                defense_counts[dl] = defense_counts.get(dl, 0) + 1
+            avg_defense = max(defense_counts, key=defense_counts.get)
+        
         defense_logs_created = []
         defenses_succeeded = []
         
@@ -599,25 +638,28 @@ class SimulationEngine:
             if not self.defense_config[defense_key]["enabled"]:
                 continue
             
-            # Calculate defense success chance
+            # Get defense effectiveness for this sophistication level
+            base_effectiveness = defense_info["effectiveness"].get(sophistication, 50)
             defense_strength = self.defense_config[defense_key]["strength"]
-            base_effectiveness = defense_info["effectiveness"][sophistication]
             
-            # Adjust effectiveness based on configured strength
-            adjusted_effectiveness = base_effectiveness * (defense_strength / 100.0)
+            # Boost effectiveness based on target vehicle defense level
+            defense_level_bonus = DEFENSE_LEVELS.get(avg_defense, DEFENSE_LEVELS["medium"])["defense_bonus"]
+            adjusted_effectiveness = base_effectiveness * (defense_strength / 100.0) * defense_level_bonus
+            adjusted_effectiveness = min(adjusted_effectiveness, 99)  # Cap at 99%
             
             # Roll for defense success
             defense_success = random.random() * 100 < adjusted_effectiveness
             
-            # Create defense log
+            # Create defense log with SPECIFIC details
             defense_id = f"def_{uuid.uuid4().hex[:8]}"
-            action_taken = ""
+            target_names = ', '.join(target_ids[:2]) if target_ids else 'неизвестно'
+            defense_level_name = DEFENSE_LEVELS.get(avg_defense, DEFENSE_LEVELS["medium"])["name"]
             
             if defense_success:
-                action_taken = f"✓ Заблокировано: {attack_info['name']} с помощью {defense_info['name']}"
+                action_taken = f"✓ {defense_info['name']} заблокировала {attack_info['name']} на {target_names} (защита: {defense_level_name}, эффективность: {adjusted_effectiveness:.0f}%)"
                 defenses_succeeded.append(defense_key)
             else:
-                action_taken = f"✗ Не удалось заблокировать {attack_info['name']} — атака слишком сложная"
+                action_taken = f"✗ {defense_info['name']} не смогла остановить {attack_info['name']} — уровень атаки ({sophistication}) превышает защиту {target_names} ({defense_level_name})"
             
             defense_log = DefenseLog(
                 id=defense_id,
@@ -627,7 +669,7 @@ class SimulationEngine:
                 attacker_id=attack_log.attacker_id,
                 action_taken=action_taken,
                 success=defense_success,
-                detection_time=defense_info["detection_time"],
+                detection_time=defense_info["detection_time"] + random.uniform(-0.02, 0.05),
                 confidence=adjusted_effectiveness / 100.0,
                 explanation=defense_info["educational_notes"],
                 icon=defense_info["icon"]
@@ -660,14 +702,30 @@ class SimulationEngine:
         # Create outcome log
         outcome_id = f"out_{uuid.uuid4().hex[:8]}"
         
+        # Build dynamic outcome text with real vehicle/defense data
+        target_ids = attack_log.target_ids
+        target_vehicles = [v for v in self.vehicles if v["id"] in target_ids]
+        target_list_str = ', '.join(target_ids[:3]) if target_ids else 'нет целей'
+        attack_name = ATTACK_TYPES.get(attack_log.attack_type, {}).get('name', attack_log.attack_type)
+        defenses_used = [DEFENSE_TYPES[d.defense_type]['name'] for d in defense_logs if d.success]
+        defenses_failed = [DEFENSE_TYPES[d.defense_type]['name'] for d in defense_logs if not d.success]
+        
         if attack_blocked:
             result = "blocked"
-            impact_description = f"Атака успешно заблокирована системой защиты. Транспортные средства не пострадали."
-            learning_points = f"Это демонстрирует важность многоуровневой защиты. Несколько механизмов защиты совместно останавливают даже сложные атаки."
+            impact_description = f"{attack_name} на {target_list_str} заблокирована. Сработали: {', '.join(defenses_used[:3])}. Транспортные средства не пострадали."
+            if target_vehicles:
+                dl = DEFENSE_LEVELS.get(target_vehicles[0].get('defense_level', 'medium'), DEFENSE_LEVELS['medium'])['name']
+                learning_points = f"Уровень защиты целей ({dl}) оказался достаточным против атаки уровня '{attack_log.sophistication}'. {len(defenses_used)} из {len(defense_logs)} защит сработали успешно."
+            else:
+                learning_points = f"Многоуровневая защита ({len(defenses_used)} механизмов) остановила атаку."
         else:
             result = "full_success"
-            impact_description = f"Атака прошла. Целевые автомобили могли получить ложную информацию, влияющую на их решения."
-            learning_points = f"Когда сложность атаки превышает возможности защиты, атака может пройти. Это показывает, почему критически важны постоянные обновления безопасности в V2X."
+            impact_description = f"{attack_name} прошла на {target_list_str}. Не сработали: {', '.join(defenses_failed[:3])}. Автомобили могли получить ложные данные."
+            if target_vehicles:
+                dl = DEFENSE_LEVELS.get(target_vehicles[0].get('defense_level', 'medium'), DEFENSE_LEVELS['medium'])['name']
+                learning_points = f"Уровень атаки '{attack_log.sophistication}' превысил защиту ({dl}). {len(defenses_failed)} из {len(defense_logs)} защит не справились. Рекомендуется повысить уровень защиты."
+            else:
+                learning_points = f"Атака уровня '{attack_log.sophistication}' прошла мимо {len(defenses_failed)} защитных механизмов."
         
         outcome = AttackOutcome(
             id=outcome_id,
@@ -748,11 +806,20 @@ class SimulationEngine:
                 light["timer"] = 0
                 light["state"] = "green" if light["state"] == "red" else "red"
         
-        # NEW: Process active attacks and resolve them
+        # Process active attacks: resolve and re-trigger for continuous journal entries
         for attack_id in list(self.active_attacks.keys()):
             attack_state = self.active_attacks[attack_id]
             if "resolution_step" in attack_state and self.step_count >= attack_state["resolution_step"]:
                 self.resolve_attack(attack_id)
+                # Re-trigger a new attack if the attack type is still active
+                if self.active_attack:
+                    attackers = [v for v in self.vehicles if v.get("is_attacker", False)]
+                    for attacker in attackers[:1]:
+                        new_id = self.initiate_attack(self.active_attack, attacker["id"], self.attack_sophistication)
+                        if new_id:
+                            new_state = self.active_attacks[new_id]
+                            new_state["resolution_step"] = self.step_count + random.randint(40, 80)
+                            new_state["repeat_interval"] = random.randint(40, 80)
 
         # Update vehicle positions
         for v in self.vehicles:
@@ -773,26 +840,49 @@ class SimulationEngine:
                         v["target_vehicle"] = random.choice(nearby)["id"]
                         v["hack_progress"] = 0.0
                 
-                # Hack target
+                # Hack target — speed depends on attack sophistication vs target defense level
                 if v["target_vehicle"]:
                     target = next((t for t in self.vehicles if t["id"] == v["target_vehicle"]), None)
                     if target and target["status"] == "moving":
                         dist = self._distance(v, target)
                         if dist < self.params["communication_range"] * 1.2:
-                            v["hack_progress"] += 1.5 
-                            if v["hack_progress"] >= 100:
+                            # Calculate hack speed based on attack sophistication vs defense level
+                            attack_mult = ATTACK_SPEED_MULTIPLIERS.get(self.attack_sophistication, 1.0)
+                            defense_info = DEFENSE_LEVELS.get(target.get("defense_level", "medium"), DEFENSE_LEVELS["medium"])
+                            defense_mult = defense_info["hack_multiplier"]
+                            hack_speed = 1.5 * attack_mult / max(defense_mult, 0.1)
+                            
+                            v["hack_progress"] += hack_speed
+                            
+                            # High-defense vehicles can resist hacking entirely
+                            resist_chance = defense_info["resist_chance"]
+                            if v["hack_progress"] > 70 and resist_chance > 0 and random.random() < resist_chance * 0.05:
+                                # Defense kicked in — reset hack
+                                v["target_vehicle"] = None
+                                v["hack_progress"] = 0
+                                target["anomalies_detected"] = target.get("anomalies_detected", 0) + 1
+                                new_anomalies.append({
+                                    "id": f"a_{self.step_count}_{target['id']}",
+                                    "timestamp": time.time(),
+                                    "sender": v["id"],
+                                    "type": self.active_attack,
+                                    "reason": f"Атака ОТРАЖЕНА защитой ({defense_info['name']})",
+                                    "severity": "medium"
+                                })
+                            elif v["hack_progress"] >= 100:
                                 target["status"] = "stopped"
                                 target["speed"] = 0
                                 target["hack_recovery_timer"] = 50  # Will recover after ~5 seconds
                                 target["anomalies_detected"] = target.get("anomalies_detected", 0) + 1
                                 v["target_vehicle"] = None
                                 v["hack_progress"] = 0
+                                defense_lvl = DEFENSE_LEVELS.get(target.get("defense_level", "medium"), DEFENSE_LEVELS["medium"])
                                 new_anomalies.append({
                                     "id": f"a_{self.step_count}_{target['id']}",
                                     "timestamp": time.time(),
                                     "sender": v["id"],
                                     "type": self.active_attack,
-                                    "reason": "Vehicle HACKED and STOPPED",
+                                    "reason": f"Автомобиль {target['id']} ВЗЛОМАН (защита: {defense_lvl['name']})",
                                     "severity": "high"
                                 })
                         else:

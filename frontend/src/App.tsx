@@ -204,7 +204,7 @@ function App() {
   const [attackSophistication, setAttackSophistication] = useState<'low' | 'medium' | 'high'>('medium')
 
   // Viewport State (Pan/Zoom)
-  const [viewState, setViewState] = useState({ x: 0, y: 0, zoom: 1 })
+  const [viewState, setViewState] = useState({ x: 0, y: 0, zoom: 1.8 })
   const [isDragging, setIsDragging] = useState(false)
   const lastMousePos = useRef({ x: 0, y: 0 })
 
@@ -215,7 +215,7 @@ function App() {
 
   // Default params
   const [localParams, setLocalParams] = useState({
-    global_speed_multiplier: 5.0,
+    global_speed_multiplier: 2.0,
     message_frequency: 1.0,
     detection_sensitivity: 0.7,
     communication_range: 0.005
@@ -515,26 +515,8 @@ function App() {
       }
     })
 
-    // Draw V2V
-    if (simulationState?.v2v_communications) {
-      simulationState.v2v_communications.forEach(comm => {
-        const from = simulationState.vehicles.find(v => v.id === comm.from)
-        const to = simulationState.vehicles.find(v => v.id === comm.to)
-        if (from && to) {
-          const p1 = project(from.lat, from.lon, simulationState.bounds, width, height)
-          const p2 = project(to.lat, to.lon, simulationState.bounds, width, height)
-
-          ctx.strokeStyle = '#10b981'
-          ctx.lineWidth = 1
-          ctx.globalAlpha = 0.3
-          ctx.beginPath()
-          ctx.moveTo(p1.x, p1.y)
-          ctx.lineTo(p2.x, p2.y)
-          ctx.stroke()
-          ctx.globalAlpha = 1
-        }
-      })
-    }
+    // V2V lines hidden for clarity (too cluttered)
+    // Uncomment to show: if (simulationState?.v2v_communications) { ... }
 
     // Draw vehicles
     simulationState?.vehicles.forEach(v => {
@@ -576,7 +558,7 @@ function App() {
       }
 
       ctx.fillStyle = color
-      ctx.scale(1.5, 1.5)
+      ctx.scale(2.5, 2.5)
 
       if (v.type === 'truck' || v.type === 'bus') {
         ctx.fill(ICONS.truck)
@@ -609,22 +591,42 @@ function App() {
       if (v.waiting_at_light) {
         ctx.fillStyle = '#fbbf24'
         ctx.beginPath()
-        ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2)
+        ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2)
         ctx.fill()
       }
 
-      // Hacking Progress Bar
+      // Hacking Progress Bar (bigger, with label)
       if (v.is_attacker && v.hack_progress && v.hack_progress > 0) {
+        const barW = 50
+        const barH = 8
         ctx.fillStyle = '#334155'
-        ctx.fillRect(pos.x - 10, pos.y - 20, 20, 4)
+        ctx.fillRect(pos.x - barW/2, pos.y - 30, barW, barH)
         ctx.fillStyle = '#ef4444'
-        ctx.fillRect(pos.x - 10, pos.y - 20, 20 * (v.hack_progress / 100), 4)
+        ctx.fillRect(pos.x - barW/2, pos.y - 30, barW * (v.hack_progress / 100), barH)
+        ctx.strokeStyle = '#ef4444'
+        ctx.lineWidth = 1
+        ctx.strokeRect(pos.x - barW/2, pos.y - 30, barW, barH)
+        // Label
+        ctx.fillStyle = '#fca5a5'
+        ctx.font = 'bold 10px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText(`АТАКА ${Math.round(v.hack_progress)}%`, pos.x, pos.y - 34)
+        ctx.textAlign = 'start'
+      }
+
+      // Stopped vehicle label
+      if (v.status === 'stopped' && !v.is_attacker) {
+        ctx.fillStyle = '#ef4444'
+        ctx.font = 'bold 11px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText('ОСТАНОВЛЕН', pos.x, pos.y + 22)
+        ctx.textAlign = 'start'
       }
 
       // Vehicle ID
       ctx.fillStyle = '#e2e8f0'
-      ctx.font = '9px monospace'
-      ctx.fillText(v.id, pos.x - 12, pos.y - 24)
+      ctx.font = 'bold 10px monospace'
+      ctx.fillText(v.id, pos.x - 12, pos.y - 28)
 
     })
 
@@ -1138,7 +1140,7 @@ function App() {
         {/* Map Canvas */}
         <div className="flex-1 relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 to-slate-950">
           {/* Context-aware Hint Bar */}
-          <div className="absolute top-0 left-0 right-0 z-10 px-4 py-2 bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 text-center">
+          <div className="absolute top-0 left-0 right-0 z-10 px-4 py-2.5 bg-slate-900/90 backdrop-blur-sm border-b border-slate-800 text-center">
             {!isRunning && !simulationState?.active_attack && (
               <span className="text-sm text-slate-300">👆 Нажмите <strong className="text-emerald-400">«Старт»</strong> на левой панели, чтобы запустить симуляцию</span>
             )}
@@ -1146,7 +1148,15 @@ function App() {
               <span className="text-sm text-slate-300">✅ Симуляция запущена. Выберите <strong className="text-red-400">кибер-атаку</strong> слева, чтобы увидеть работу системы защиты</span>
             )}
             {simulationState?.active_attack && (
-              <span className="text-sm text-red-300 animate-pulse">⚠️ Атака <strong>{simulationState.active_attack.toUpperCase()}</strong> активна! Наблюдайте за реакцией системы IDS в правой панели</span>
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-sm text-red-300 animate-pulse font-bold">
+                  ⚠️ {simulationState.active_attack === 'sybil' && '🎭 АТАКА СИВИЛЛЫ — хакер создаёт фейковые машины в сети'}
+                  {simulationState.active_attack === 'replay' && '🔁 ПОВТОРНАЯ АТАКА — хакер перехватывает и повторяет старые сообщения'}
+                  {simulationState.active_attack === 'bogus' && '📡 ЛОЖНЫЕ ДАННЫЕ — хакер отправляет поддельную скорость'}
+                  {!['sybil', 'replay', 'bogus'].includes(simulationState.active_attack) && `АТАКА: ${simulationState.active_attack.toUpperCase()}`}
+                </span>
+                <span className="text-xs text-slate-400 border-l border-slate-700 pl-3">🛡️ Наблюдайте за IDS →</span>
+              </div>
             )}
           </div>
           <canvas
@@ -1223,10 +1233,6 @@ function App() {
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-yellow-500 rounded-full" />
                 <span>Светофор</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-0.5 bg-emerald-500/50" />
-                <span>Связь V2V</span>
               </div>
             </div>
           </div>

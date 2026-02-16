@@ -340,45 +340,36 @@ class SimulationEngine:
         # Initialize Road Network & Traffic Lights
         self.road_graph = self._create_advanced_road_network()
         self.traffic_lights = self._init_traffic_lights()
-        self.vehicles = self._generate_initial_vehicles(count=30)
+        self.vehicles = self._generate_initial_vehicles(count=10)
         
         # Simulation parameters
         self.params = {
-            "global_speed_multiplier": 5.0,
+            "global_speed_multiplier": 2.0,
             "message_frequency": 1.0,
             "detection_sensitivity": 0.7,
             "communication_range": 0.005
         }
 
     def _create_advanced_road_network(self):
-        """Create a more complex city-like road network"""
+        """Create a clean city-like road network"""
         G = nx.DiGraph()
         
-        # Create a grid with some randomness
-        rows = 6
-        cols = 6
+        # Simple clean grid
+        rows = 4
+        cols = 4
         
         lat_step = (self.bounds["lat_max"] - self.bounds["lat_min"]) / (rows - 1)
         lon_step = (self.bounds["lon_max"] - self.bounds["lon_min"]) / (cols - 1)
         
-        # Add nodes
+        # Add nodes - clean grid, no jitter
         for r in range(rows):
             for c in range(cols):
                 node_id = f"n_{r}_{c}"
-                # Add slight jitter
-                jitter_lat = random.uniform(-lat_step * 0.1, lat_step * 0.1)
-                jitter_lon = random.uniform(-lon_step * 0.1, lon_step * 0.1)
-                
-                lat = self.bounds["lat_min"] + r * lat_step + jitter_lat
-                lon = self.bounds["lon_min"] + c * lon_step + jitter_lon
-                
-                # Clamp
-                lat = max(self.bounds["lat_min"], min(self.bounds["lat_max"], lat))
-                lon = max(self.bounds["lon_min"], min(self.bounds["lon_max"], lon))
-                
+                lat = self.bounds["lat_min"] + r * lat_step
+                lon = self.bounds["lon_min"] + c * lon_step
                 G.add_node(node_id, pos=(lat, lon))
         
-        # Add edges (Grid structure)
+        # Add edges (full grid connectivity)
         for r in range(rows):
             for c in range(cols):
                 curr = f"n_{r}_{c}"
@@ -386,16 +377,14 @@ class SimulationEngine:
                 # Horizontal
                 if c < cols - 1:
                     next_node = f"n_{r}_{c+1}"
-                    if random.random() < 0.95: # More connectivity
-                        G.add_edge(curr, next_node)
-                        G.add_edge(next_node, curr)
+                    G.add_edge(curr, next_node)
+                    G.add_edge(next_node, curr)
                 
                 # Vertical
                 if r < rows - 1:
                     next_node = f"n_{r+1}_{c}"
-                    if random.random() < 0.95:
-                        G.add_edge(curr, next_node)
-                        G.add_edge(next_node, curr)
+                    G.add_edge(curr, next_node)
+                    G.add_edge(next_node, curr)
                         
         return G
 
@@ -460,8 +449,8 @@ class SimulationEngine:
                 "waiting_at_light": False
             })
         
-        # Add Hackers
-        attacker_count = 3
+        # Add Hacker (just 1 for clarity)
+        attacker_count = 1
         for i in range(attacker_count):
             if i < len(vehicles):
                 vehicles[i]["is_attacker"] = True
@@ -496,7 +485,7 @@ class SimulationEngine:
         self.active_attacks = {}
         self.road_graph = self._create_advanced_road_network()
         self.traffic_lights = self._init_traffic_lights()
-        self.vehicles = self._generate_initial_vehicles(count=30)
+        self.vehicles = self._generate_initial_vehicles(count=10)
 
 
     def set_attack(self, attack_type, sophistication="medium"):
@@ -790,7 +779,7 @@ class SimulationEngine:
                     if target and target["status"] == "moving":
                         dist = self._distance(v, target)
                         if dist < self.params["communication_range"] * 1.2:
-                            v["hack_progress"] += 3.5 
+                            v["hack_progress"] += 1.5 
                             if v["hack_progress"] >= 100:
                                 target["status"] = "stopped"
                                 target["speed"] = 0

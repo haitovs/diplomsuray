@@ -215,19 +215,7 @@ export default function MapView({ simulationState, selectedVehicle, onSelectVehi
           )
         })}
 
-        {/* Road edges as polylines */}
-        {simulationState.roads?.edges?.map(([startId, endId], idx) => {
-          const s = simulationState.roads.nodes[startId]
-          const e = simulationState.roads.nodes[endId]
-          if (!s || !e) return null
-          return (
-            <Polyline
-              key={`road-${idx}`}
-              positions={[[s[0], s[1]], [e[0], e[1]]]}
-              pathOptions={{ color: '#475569', weight: 4, opacity: 0.5 }}
-            />
-          )
-        })}
+        {/* Roads are visible on the map tiles — no overlay needed */}
 
         {/* Attack line */}
         {attackLine && (

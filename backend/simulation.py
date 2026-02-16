@@ -8,10 +8,10 @@ import uuid
 
 # Vehicle type definitions
 VEHICLE_TYPES = {
-    "passenger": {"max_speed": 120, "acceleration": 5, "color": "blue", "trust": 0.9, "icon": "car"},
-    "truck": {"max_speed": 90, "acceleration": 3, "color": "green", "trust": 0.85, "icon": "truck"},
-    "emergency": {"max_speed": 150, "acceleration": 8, "color": "red", "trust": 0.95, "icon": "emergency"},
-    "bus": {"max_speed": 80, "acceleration": 2, "color": "orange", "trust": 0.88, "icon": "bus"},
+    "passenger": {"max_speed": 60, "acceleration": 3, "color": "blue", "trust": 0.9, "icon": "car"},
+    "truck": {"max_speed": 40, "acceleration": 2, "color": "green", "trust": 0.85, "icon": "truck"},
+    "emergency": {"max_speed": 80, "acceleration": 5, "color": "red", "trust": 0.95, "icon": "emergency"},
+    "bus": {"max_speed": 35, "acceleration": 1.5, "color": "orange", "trust": 0.88, "icon": "bus"},
 }
 
 # Defense level multipliers: how much they slow down hacking
@@ -345,10 +345,10 @@ class SimulationEngine:
         
         # Map bounds (approx 2km x 2km)
         self.bounds = {
-            "lat_min": 40.7000,
-            "lat_max": 40.7200,
-            "lon_min": -74.0200,
-            "lon_max": -74.0000
+            "lat_min": 40.7020,
+            "lat_max": 40.7170,
+            "lon_min": -74.0150,
+            "lon_max": -74.0010
         }
         
         # Initialize Road Network & Traffic Lights
@@ -358,48 +358,105 @@ class SimulationEngine:
         
         # Simulation parameters
         self.params = {
-            "global_speed_multiplier": 2.0,
+            "global_speed_multiplier": 0.5,
             "message_frequency": 1.0,
             "detection_sensitivity": 0.7,
             "communication_range": 0.005
         }
 
     def _create_advanced_road_network(self):
-        """Create a clean city-like road network"""
+        """Create a road network aligned with real Lower Manhattan streets.
+
+        Uses actual intersection coords for the Financial District area
+        (40.700-40.720, -74.020 to -74.000) so vehicles follow visible roads
+        on the CartoDB / OSM tiles.
+        """
         G = nx.DiGraph()
-        
-        # Simple clean grid
-        rows = 4
-        cols = 4
-        
-        lat_step = (self.bounds["lat_max"] - self.bounds["lat_min"]) / (rows - 1)
-        lon_step = (self.bounds["lon_max"] - self.bounds["lon_min"]) / (cols - 1)
-        
-        # Add nodes - clean grid, no jitter
-        for r in range(rows):
-            for c in range(cols):
-                node_id = f"n_{r}_{c}"
-                lat = self.bounds["lat_min"] + r * lat_step
-                lon = self.bounds["lon_min"] + c * lon_step
-                G.add_node(node_id, pos=(lat, lon))
-        
-        # Add edges (full grid connectivity)
-        for r in range(rows):
-            for c in range(cols):
-                curr = f"n_{r}_{c}"
-                
-                # Horizontal
-                if c < cols - 1:
-                    next_node = f"n_{r}_{c+1}"
-                    G.add_edge(curr, next_node)
-                    G.add_edge(next_node, curr)
-                
-                # Vertical
-                if r < rows - 1:
-                    next_node = f"n_{r+1}_{c}"
-                    G.add_edge(curr, next_node)
-                    G.add_edge(next_node, curr)
-                        
+
+        # ── Real intersection nodes ──────────────────────────────────────
+        # N-S streets (south → north): Greenwich, W Broadway, Church, Broadway
+        # E-W streets (west → east): Battery Pl, Morris, Rector, Cortlandt,
+        #   Fulton, Vesey, Barclay, Park Pl, Murray
+        intersections = {
+            # ── Greenwich St (west column) ──
+            "greenwich_battery":   (40.7028, -74.0135),
+            "greenwich_rector":    (40.7065, -74.0133),
+            "greenwich_cortlandt": (40.7090, -74.0130),
+            "greenwich_fulton":    (40.7107, -74.0120),
+            "greenwich_vesey":     (40.7120, -74.0115),
+            "greenwich_barclay":   (40.7135, -74.0108),
+            "greenwich_murray":    (40.7152, -74.0100),
+
+            # ── West Broadway / W Broadway (center-west) ──
+            "wbway_rector":        (40.7070, -74.0105),
+            "wbway_cortlandt":     (40.7092, -74.0098),
+            "wbway_fulton":        (40.7110, -74.0090),
+            "wbway_vesey":         (40.7125, -74.0085),
+            "wbway_barclay":       (40.7140, -74.0078),
+            "wbway_murray":        (40.7155, -74.0070),
+
+            # ── Church St (center) ──
+            "church_rector":       (40.7075, -74.0075),
+            "church_cortlandt":    (40.7095, -74.0068),
+            "church_fulton":       (40.7112, -74.0058),
+            "church_vesey":        (40.7128, -74.0055),
+            "church_barclay":      (40.7143, -74.0048),
+            "church_murray":       (40.7158, -74.0042),
+
+            # ── Broadway (east column) ──
+            "bway_battery":        (40.7035, -74.0130),
+            "bway_rector":         (40.7080, -74.0060),
+            "bway_cortlandt":      (40.7098, -74.0048),
+            "bway_fulton":         (40.7115, -74.0040),
+            "bway_vesey":          (40.7130, -74.0032),
+            "bway_barclay":        (40.7145, -74.0028),
+            "bway_murray":         (40.7160, -74.0020),
+        }
+
+        for nid, (lat, lon) in intersections.items():
+            G.add_node(nid, pos=(lat, lon))
+
+        # ── Edges (bidirectional): N-S streets ───────────────────────────
+        ns_streets = {
+            "greenwich": [
+                "greenwich_battery", "greenwich_rector", "greenwich_cortlandt",
+                "greenwich_fulton", "greenwich_vesey", "greenwich_barclay",
+                "greenwich_murray",
+            ],
+            "wbway": [
+                "wbway_rector", "wbway_cortlandt", "wbway_fulton",
+                "wbway_vesey", "wbway_barclay", "wbway_murray",
+            ],
+            "church": [
+                "church_rector", "church_cortlandt", "church_fulton",
+                "church_vesey", "church_barclay", "church_murray",
+            ],
+            "bway": [
+                "bway_battery", "bway_rector", "bway_cortlandt",
+                "bway_fulton", "bway_vesey", "bway_barclay", "bway_murray",
+            ],
+        }
+
+        for _street, nodes in ns_streets.items():
+            for i in range(len(nodes) - 1):
+                G.add_edge(nodes[i], nodes[i + 1])
+                G.add_edge(nodes[i + 1], nodes[i])
+
+        # ── Edges (bidirectional): E-W cross-streets ─────────────────────
+        ew_streets = {
+            "rector":    ["greenwich_rector",    "wbway_rector",    "church_rector",    "bway_rector"],
+            "cortlandt": ["greenwich_cortlandt", "wbway_cortlandt", "church_cortlandt", "bway_cortlandt"],
+            "fulton":    ["greenwich_fulton",    "wbway_fulton",    "church_fulton",    "bway_fulton"],
+            "vesey":     ["greenwich_vesey",     "wbway_vesey",     "church_vesey",     "bway_vesey"],
+            "barclay":   ["greenwich_barclay",   "wbway_barclay",   "church_barclay",   "bway_barclay"],
+            "murray":    ["greenwich_murray",    "wbway_murray",    "church_murray",    "bway_murray"],
+        }
+
+        for _street, nodes in ew_streets.items():
+            for i in range(len(nodes) - 1):
+                G.add_edge(nodes[i], nodes[i + 1])
+                G.add_edge(nodes[i + 1], nodes[i])
+
         return G
 
     def _init_traffic_lights(self):
@@ -1009,7 +1066,7 @@ class SimulationEngine:
         speed_kmh = v["max_speed"] * 0.6
         speed_deg_per_sec = (speed_kmh / 111) / 3600
         
-        move_dist = speed_deg_per_sec * 0.1 * self.params["global_speed_multiplier"] * 10
+        move_dist = speed_deg_per_sec * 0.1 * self.params["global_speed_multiplier"]
         
         v["speed"] = speed_kmh
         

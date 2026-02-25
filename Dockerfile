@@ -47,7 +47,7 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Expose port
-EXPOSE 4070
+EXPOSE 4087
 
 # Start Supervisor (manages Nginx + Uvicorn)
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

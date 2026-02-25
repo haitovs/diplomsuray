@@ -3,7 +3,7 @@ services:
     build: .
     container_name: suray-v2x-simulation
     ports:
-      - "4070:4070"
+      - "4087:4087"
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1

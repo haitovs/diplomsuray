@@ -56,6 +56,13 @@ body {
   }
 }
 
+/* Gentle glow animation — replaces aggressive animate-pulse */
+@keyframes gentle-glow {
+  0%, 100% { box-shadow: 0 0 4px currentColor; }
+  50% { box-shadow: 0 0 8px currentColor; }
+}
+.animate-gentle-glow { animation: gentle-glow 3s ease-in-out infinite; }
+
 /* iOS Safari bounce fix */
 @supports (-webkit-touch-callout: none) {
   body {

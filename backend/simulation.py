@@ -14,11 +14,29 @@ VEHICLE_TYPES = {
     "bus": {"max_speed": 35, "acceleration": 1.5, "color": "orange", "trust": 0.88, "icon": "bus"},
 }
 
-# Defense level multipliers: how much they slow down hacking
+# Human-readable vehicle names by type
+VEHICLE_NAMES = {
+    "passenger": [
+        "Toyota Camry", "Honda Civic", "BMW 320i", "Hyundai Sonata", "Kia K5",
+        "VW Passat", "Mazda 6", "Skoda Octavia", "Lada Vesta", "Audi A4", "Mercedes C200",
+    ],
+    "truck": [
+        "Mercedes Actros", "Volvo FH16", "MAN TGX", "Scania R500", "DAF XF", "KAMAZ 5490",
+    ],
+    "bus": [
+        "Mercedes Citaro", "Volvo 7900", "MAZ 203", "MAN Lion's City",
+    ],
+    "emergency": [
+        "Mercedes Sprinter", "Ford Transit", "VW Crafter",
+    ],
+    "hacker": ["..."],
+}
+
+# Defense level multipliers: higher multiplier = slower hacking = better defense
 DEFENSE_LEVELS = {
-    "low":    {"name": "Низкий",  "hack_multiplier": 1.5, "resist_chance": 0.0,  "defense_bonus": 0.7},
+    "low":    {"name": "Низкий",  "hack_multiplier": 0.5, "resist_chance": 0.0,  "defense_bonus": 0.7},
     "medium": {"name": "Средний", "hack_multiplier": 1.0, "resist_chance": 0.15, "defense_bonus": 1.0},
-    "high":   {"name": "Высокий", "hack_multiplier": 0.35, "resist_chance": 0.4,  "defense_bonus": 1.5},
+    "high":   {"name": "Высокий", "hack_multiplier": 3.0, "resist_chance": 0.4,  "defense_bonus": 1.5},
 }
 
 # Attack sophistication multipliers for hack speed
@@ -504,8 +522,13 @@ class SimulationEngine:
             else:
                 defense_level = "high"
 
+            # Pick a human-readable name for this vehicle type
+            name_pool = VEHICLE_NAMES.get(vtype, VEHICLE_NAMES["passenger"])
+            vname = random.choice(name_pool)
+
             vehicles.append({
                 "id": f"v_{i}",
+                "name": vname,
                 "type": vtype,
                 "lat": pos[0],
                 "lon": pos[1],
@@ -526,6 +549,7 @@ class SimulationEngine:
                 "status": "moving",
                 "progress": 0.0,
                 "hack_progress": 0.0,
+                "hack_cooldown": 0,
                 "target_vehicle": None,
                 "waiting_at_light": False
             })
@@ -885,8 +909,12 @@ class SimulationEngine:
                 
             # Hacker Logic
             if v["is_attacker"] and self.active_attack:
-                # Find target
-                if not v["target_vehicle"]:
+                # Decrement hack cooldown
+                if v.get("hack_cooldown", 0) > 0:
+                    v["hack_cooldown"] -= 1
+
+                # Find target (only if no cooldown)
+                if not v["target_vehicle"] and v.get("hack_cooldown", 0) <= 0:
                     nearby = []
                     for target in self.vehicles:
                         if not target["is_attacker"] and target["status"] == "moving":
@@ -914,9 +942,10 @@ class SimulationEngine:
                             # High-defense vehicles can resist hacking entirely
                             resist_chance = defense_info["resist_chance"]
                             if v["hack_progress"] > 70 and resist_chance > 0 and random.random() < resist_chance * 0.05:
-                                # Defense kicked in — reset hack
+                                # Defense kicked in — reset hack with cooldown
                                 v["target_vehicle"] = None
                                 v["hack_progress"] = 0
+                                v["hack_cooldown"] = 30  # ~3 seconds cooldown
                                 target["anomalies_detected"] = target.get("anomalies_detected", 0) + 1
                                 new_anomalies.append({
                                     "id": f"a_{self.step_count}_{target['id']}",
@@ -933,6 +962,7 @@ class SimulationEngine:
                                 target["anomalies_detected"] = target.get("anomalies_detected", 0) + 1
                                 v["target_vehicle"] = None
                                 v["hack_progress"] = 0
+                                v["hack_cooldown"] = 30  # ~3 seconds cooldown before next target
                                 defense_lvl = DEFENSE_LEVELS.get(target.get("defense_level", "medium"), DEFENSE_LEVELS["medium"])
                                 new_anomalies.append({
                                     "id": f"a_{self.step_count}_{target['id']}",

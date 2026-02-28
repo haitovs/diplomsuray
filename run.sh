@@ -1,14 +1,17 @@
 #!/bin/bash
 echo "Starting Suray V2X Security Simulation..."
 
+# Get the script directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # Start backend in background
 echo "Starting backend on http://localhost:8000 ..."
-cd backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
+cd "$SCRIPT_DIR/backend" && python3 -m uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 
 # Start frontend
 echo "Starting frontend on http://localhost:3000 ..."
-cd ../frontend && npm run dev &
+cd "$SCRIPT_DIR/frontend" && npm run dev &
 FRONTEND_PID=$!
 
 echo ""

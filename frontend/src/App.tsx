@@ -1,7 +1,15 @@
 import { clsx } from 'clsx'
 import { Activity, AlertTriangle, HelpCircle, Map as MapIcon, Pause, Play, RotateCcw, Settings, Shield, X, Zap } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import MapView from './MapView'
+
+// Kinetic UI Components
+import { MagneticButton } from './components/MagneticButton'
+import { DynamicContainer } from './components/DynamicContainer'
+import { FluidGrid } from './components/FluidGrid'
+import { ReactiveOrchestrator, TriggerButton, ReactiveCard, GlobalRipple } from './components/ReactiveOrchestrator'
+import { useIsMobile } from './utils/motionUtils'
 
 // Types
 interface Vehicle {
@@ -221,6 +229,9 @@ function App() {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectAttemptRef = useRef(0)
 
+  // Motion preferences for accessibility
+  const isMobile = useIsMobile()
+
   // Default params
   const [localParams, setLocalParams] = useState({
     global_speed_multiplier: 2.0,
@@ -361,12 +372,27 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden font-sans">
+    <ReactiveOrchestrator>
+      <GlobalRipple />
+      <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden font-sans">
 
       {/* Welcome Screen */}
-      {showWelcome && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/95 backdrop-blur-md p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-8 shadow-2xl">
+      <AnimatePresence>
+        {showWelcome && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/95 backdrop-blur-md p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: -20, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-8 shadow-2xl"
+            >
             <div className="flex items-center gap-3 mb-6">
               <Shield className="w-10 h-10 text-emerald-500" />
               <div>
@@ -422,26 +448,43 @@ function App() {
               </div>
             </div>
 
-            <button
+            <MagneticButton
               onClick={() => setShowWelcome(false)}
+              strength={isMobile ? 0 : 0.3}
               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-emerald-900/30"
             >
               🚀 Начать работу с симулятором
-            </button>
-          </div>
-        </div>
-      )}
+            </MagneticButton>
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Help Modal */}
-      {showHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative">
-            <button
-              onClick={() => setShowHelp(false)}
-              className="absolute top-4 right-4 p-2 hover:bg-slate-800 rounded-full transition-colors"
+      <AnimatePresence>
+        {showHelp && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: -20, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative"
             >
-              <X className="w-6 h-6 text-slate-400" />
-            </button>
+              <motion.button
+                onClick={() => setShowHelp(false)}
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                className="absolute top-4 right-4 p-2 hover:bg-slate-800 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-slate-400" />
+              </motion.button>
 
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-emerald-400">
               <HelpCircle className="w-8 h-8" />
@@ -519,16 +562,18 @@ function App() {
             </div>
 
             <div className="mt-6 pt-4 border-t border-slate-800 flex justify-end">
-              <button
+              <MagneticButton
                 onClick={() => setShowHelp(false)}
+                strength={isMobile ? 0 : 0.3}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-medium transition-colors"
               >
                 Понятно!
-              </button>
+              </MagneticButton>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
       <div className="w-96 border-r border-slate-800 bg-slate-900 flex flex-col overflow-hidden shadow-xl z-10">
@@ -600,134 +645,138 @@ function App() {
             </h2>
             <div className="flex gap-2 mb-3">
               {!isRunning ? (
-                <button
+                <MagneticButton
                   onClick={startSimulation}
+                  strength={isMobile ? 0 : 0.3}
                   className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg transition-all shadow-lg shadow-emerald-900/20 font-medium text-sm"
-                  title="Запустить симуляцию"
                 >
                   <Play className="w-4 h-4 fill-current" /> Старт
-                </button>
+                </MagneticButton>
               ) : (
-                <button
+                <MagneticButton
                   onClick={stopSimulation}
+                  strength={isMobile ? 0 : 0.3}
                   className="flex-1 flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-lg transition-all shadow-lg shadow-amber-900/20 font-medium text-sm"
-                  title="Пауза симуляции"
                 >
                   <Pause className="w-4 h-4 fill-current" /> Пауза
-                </button>
+                </MagneticButton>
               )}
-              <button
+              <MagneticButton
                 onClick={resetSimulation}
+                strength={isMobile ? 0 : 0.2}
                 className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors border border-slate-600 text-xs"
-                title="Сброс симуляции в начальное состояние"
               >
                 <RotateCcw className="w-4 h-4" /> Сброс
-              </button>
-              <button
+              </MagneticButton>
+              <MagneticButton
                 onClick={() => setShowParams(!showParams)}
+                strength={isMobile ? 0 : 0.2}
                 className={clsx(
                   "flex items-center gap-1.5 px-3 py-2.5 rounded-lg transition-colors border text-xs",
                   showParams ? "bg-emerald-600 border-emerald-500 text-white" : "bg-slate-700 border-slate-600 hover:bg-slate-600"
                 )}
-                title="Настройки скорости, чувствительности и дальности связи"
               >
                 <Settings className="w-4 h-4" /> Настройки
-              </button>
+              </MagneticButton>
             </div>
           </div>
 
           {/* Simulation Parameters */}
-          {showParams && (
-            <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 animate-in slide-in-from-top-2 duration-200">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Настройки</h2>
-
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <label className="text-xs text-slate-300">Скорость</label>
-                    <span className="text-xs font-mono text-emerald-400">{localParams.global_speed_multiplier.toFixed(1)}x</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="10"
-                    step="0.1"
-                    value={localParams.global_speed_multiplier}
-                    onChange={(e) => updateParams({ global_speed_multiplier: parseFloat(e.target.value) })}
-                    className="w-full accent-emerald-500 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-                  />
+          <DynamicContainer
+            title="Настройки"
+            icon={<Settings className="w-3 h-3 text-emerald-400" />}
+            defaultExpanded={showParams}
+            onExpand={setShowParams}
+          >
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <label className="text-xs text-slate-300">Скорость</label>
+                  <span className="text-xs font-mono text-emerald-400">{localParams.global_speed_multiplier.toFixed(1)}x</span>
                 </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="10"
+                  step="0.1"
+                  value={localParams.global_speed_multiplier}
+                  onChange={(e) => updateParams({ global_speed_multiplier: parseFloat(e.target.value) })}
+                  className="w-full accent-emerald-500 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
 
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <label className="text-xs text-slate-300" title="IDS — Система обнаружения вторжений">Чувствит. IDS ℹ️</label>
-                    <span className="text-xs font-mono text-emerald-400">{(localParams.detection_sensitivity * 100).toFixed(0)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="1"
-                    step="0.1"
-                    value={localParams.detection_sensitivity}
-                    onChange={(e) => updateParams({ detection_sensitivity: parseFloat(e.target.value) })}
-                    className="w-full accent-emerald-500 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-                  />
+              <div>
+                <div className="flex justify-between mb-1">
+                  <label className="text-xs text-slate-300" title="IDS — Система обнаружения вторжений">Чувствит. IDS ℹ️</label>
+                  <span className="text-xs font-mono text-emerald-400">{(localParams.detection_sensitivity * 100).toFixed(0)}%</span>
                 </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1"
+                  step="0.1"
+                  value={localParams.detection_sensitivity}
+                  onChange={(e) => updateParams({ detection_sensitivity: parseFloat(e.target.value) })}
+                  className="w-full accent-emerald-500 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
 
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <label className="text-xs text-slate-300" title="V2V (Vehicle-to-Vehicle) — дальность связи между автомобилями">Дальность V2V ℹ️</label>
-                    <span className="text-xs font-mono text-emerald-400">{(localParams.communication_range * 1000).toFixed(0)}m</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.001"
-                    max="0.01"
-                    step="0.001"
-                    value={localParams.communication_range}
-                    onChange={(e) => updateParams({ communication_range: parseFloat(e.target.value) })}
-                    className="w-full accent-emerald-500 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-                  />
+              <div>
+                <div className="flex justify-between mb-1">
+                  <label className="text-xs text-slate-300" title="V2V (Vehicle-to-Vehicle) — дальность связи между автомобилями">Дальность V2V ℹ️</label>
+                  <span className="text-xs font-mono text-emerald-400">{(localParams.communication_range * 1000).toFixed(0)}m</span>
                 </div>
+                <input
+                  type="range"
+                  min="0.001"
+                  max="0.01"
+                  step="0.001"
+                  value={localParams.communication_range}
+                  onChange={(e) => updateParams({ communication_range: parseFloat(e.target.value) })}
+                  className="w-full accent-emerald-500 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                />
               </div>
             </div>
-          )}
+          </DynamicContainer>
 
           {/* Presets */}
-          <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <MapIcon className="w-3 h-3" /> Сценарии
-            </h2>
-            <div className="text-[11px] text-slate-400 mb-2">Готовые сценарии дорожного движения.</div>
+          <DynamicContainer
+            title="Сценарии"
+            icon={<MapIcon className="w-3 h-3 text-blue-400" />}
+            defaultExpanded={false}
+          >
+            <div className="text-[11px] text-slate-400 mb-3">Готовые сценарии дорожного движения.</div>
             <div className="grid grid-cols-2 gap-2">
               {presets.map(preset => (
-                <button
+                <MagneticButton
                   key={preset.id}
                   onClick={() => loadPreset(preset.id)}
+                  strength={isMobile ? 0 : 0.2}
                   className="p-2 bg-slate-700 hover:bg-slate-600 rounded text-xs transition-colors text-left text-slate-300 hover:text-white"
-                  title={preset.description}
                 >
                   {preset.name}
-                </button>
+                </MagneticButton>
               ))}
             </div>
-          </div>
+          </DynamicContainer>
 
           {/* Attack Controls */}
-          <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Zap className="w-3 h-3" /> Кибер-атаки
-            </h2>
-            <div className="text-[11px] text-slate-400 mb-2">Запустите атаку и наблюдайте за реакцией системы защиты.</div>
+          <DynamicContainer
+            title="Кибер-атаки"
+            icon={<Zap className="w-3 h-3 text-red-400" />}
+            defaultExpanded={true}
+          >
+            <div className="text-[11px] text-slate-400 mb-3">Запустите атаку и наблюдайте за реакцией системы защиты.</div>
 
             {/* Sophistication Selector */}
             <div className="mb-3">
               <div className="text-[11px] text-slate-400 mb-1.5 font-medium">Уровень сложности атаки:</div>
               <div className="flex gap-1">
                 {(['low', 'medium', 'high'] as const).map(level => (
-                  <button
+                  <MagneticButton
                     key={level}
                     onClick={() => setAttackSophistication(level)}
+                    strength={isMobile ? 0 : 0.15}
                     className={clsx(
                       "flex-1 py-1.5 rounded text-[10px] font-bold uppercase transition-all border",
                       attackSophistication === level
@@ -738,47 +787,52 @@ function App() {
                     )}
                   >
                     {SOPHISTICATION_RU[level] || level}
-                  </button>
+                  </MagneticButton>
                 ))}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button
+              <TriggerButton
+                triggerType="attack"
                 onClick={() => triggerAttack('sybil')}
                 className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-200 p-2.5 rounded-lg text-xs transition-all hover:border-red-500/40 text-left group"
               >
-                <div className="font-bold mb-0.5 group-hover:text-red-100">Атака Сивиллы</div>
+                <div className="font-bold mb-0.5 group-hover:text-red-100">🎭 Атака Сивиллы</div>
                 <div className="text-[11px] text-red-300/60">Создание фейковых машин</div>
-              </button>
-              <button
+              </TriggerButton>
+              <TriggerButton
+                triggerType="attack"
                 onClick={() => triggerAttack('replay')}
                 className="bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-200 p-2.5 rounded-lg text-xs transition-all hover:border-orange-500/40 text-left group"
               >
-                <div className="font-bold mb-0.5 group-hover:text-orange-100">Повторная атака</div>
+                <div className="font-bold mb-0.5 group-hover:text-orange-100">🔁 Повторная атака</div>
                 <div className="text-[11px] text-orange-300/60">Повтор старых сообщений</div>
-              </button>
-              <button
+              </TriggerButton>
+              <TriggerButton
+                triggerType="attack"
                 onClick={() => triggerAttack('bogus')}
                 className="bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 text-yellow-200 p-2.5 rounded-lg text-xs transition-all hover:border-yellow-500/40 text-left group"
               >
-                <div className="font-bold mb-0.5 group-hover:text-yellow-100">Ложные данные</div>
+                <div className="font-bold mb-0.5 group-hover:text-yellow-100">📡 Ложные данные</div>
                 <div className="text-[11px] text-yellow-300/60">Подделка скорости</div>
-              </button>
-              <button
+              </TriggerButton>
+              <MagneticButton
                 onClick={clearAttack}
+                strength={isMobile ? 0 : 0.2}
                 className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 p-2.5 rounded-lg text-xs transition-all text-center flex items-center justify-center font-medium"
               >
                 Остановить атаку
-              </button>
+              </MagneticButton>
             </div>
-          </div>
+          </DynamicContainer>
 
           {/* Stats */}
-          <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Activity className="w-3 h-3" /> Статистика
-            </h2>
+          <DynamicContainer
+            title="Статистика"
+            icon={<Activity className="w-3 h-3 text-cyan-400" />}
+            defaultExpanded={true}
+          >
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
                 <div className="text-xs text-slate-400">Машины</div>
@@ -793,73 +847,84 @@ function App() {
                 <div className="text-lg font-mono">{simulationState?.v2v_communications?.length || 0}</div>
               </div>
             </div>
-          </div>
+          </DynamicContainer>
 
           {/* Vehicle Details */}
-          {selectedVehicle && (
-            <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm animate-in slide-in-from-right-2 duration-200">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-                Транспорт: {selectedVehicle.id}
-              </h2>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Тип:</span>
-                  <span className="capitalize">{selectedVehicle.type}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Статус:</span>
-                  <span className={clsx(
-                    "font-bold",
-                    selectedVehicle.status === 'moving' ? "text-emerald-400" :
-                      selectedVehicle.status === 'stopped' ? "text-red-400" : "text-blue-400"
-                  )}>
-                    {(STATUS_RU[selectedVehicle.status] || selectedVehicle.status).toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Направление:</span>
-                  <span className="font-mono">{selectedVehicle.destination}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Скорость:</span>
-                  <span>{selectedVehicle.speed.toFixed(1)} km/h</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400" title="Уровень доверия к данному транспортному средству">Доверие:</span>
-                  <span>{(selectedVehicle.trust_score * 100).toFixed(0)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Отправлено:</span>
-                  <span>{selectedVehicle.messages_sent}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Аномалии:</span>
-                  <span className="text-red-400">{selectedVehicle.anomalies_detected}</span>
-                </div>
+          <AnimatePresence>
+            {selectedVehicle && (
+              <motion.div
+                key={selectedVehicle.id}
+                initial={{ opacity: 0, x: 30, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -30, scale: 0.95 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm"
+              >
+                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                  Транспорт: {selectedVehicle.id}
+                </h2>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Тип:</span>
+                    <span className="capitalize">{selectedVehicle.type}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Статус:</span>
+                    <span className={clsx(
+                      "font-bold",
+                      selectedVehicle.status === 'moving' ? "text-emerald-400" :
+                        selectedVehicle.status === 'stopped' ? "text-red-400" : "text-blue-400"
+                    )}>
+                      {(STATUS_RU[selectedVehicle.status] || selectedVehicle.status).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Направление:</span>
+                    <span className="font-mono">{selectedVehicle.destination}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Скорость:</span>
+                    <span>{selectedVehicle.speed.toFixed(1)} km/h</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400" title="Уровень доверия к данному транспортному средству">Доверие:</span>
+                    <span>{(selectedVehicle.trust_score * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Отправлено:</span>
+                    <span>{selectedVehicle.messages_sent}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Аномалии:</span>
+                    <span className="text-red-400">{selectedVehicle.anomalies_detected}</span>
+                  </div>
 
-                {/* Editable speed */}
-                <div className="pt-2 border-t border-slate-700 mt-2">
-                  <label className="text-slate-400 block mb-1">Регулировка скорости:</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max={selectedVehicle.max_speed}
-                    value={selectedVehicle.speed}
-                    onChange={(e) => updateVehicle(selectedVehicle.id, { speed: parseFloat(e.target.value) })}
-                    className="w-full accent-emerald-500 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-                  />
+                  {/* Editable speed */}
+                  <div className="pt-2 border-t border-slate-700 mt-2">
+                    <label className="text-slate-400 block mb-1">Регулировка скорости:</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max={selectedVehicle.max_speed}
+                      value={selectedVehicle.speed}
+                      onChange={(e) => updateVehicle(selectedVehicle.id, { speed: parseFloat(e.target.value) })}
+                      className="w-full accent-emerald-500 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Alerts */}
-          <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-sm flex-1 flex flex-col min-h-[200px]">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <AlertTriangle className="w-3 h-3" /> Оповещения IDS
-            </h2>
-            <div className="text-[11px] text-slate-400 mb-2">Система обнаружения вторжений</div>
-            <div className="space-y-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+          <DynamicContainer
+            title="Оповещения IDS"
+            icon={<AlertTriangle className="w-3 h-3 text-yellow-400" />}
+            defaultExpanded={true}
+            className="flex-1 flex flex-col min-h-[200px]"
+          >
+            <div className="text-[11px] text-slate-400 mb-3">Система обнаружения вторжений</div>
+            <div className="space-y-2 overflow-y-auto flex-1 pr-1 custom-scrollbar max-h-[300px]">
               {activeAlerts.slice(0, 10).map((alert, idx) => (
                 <div
                   key={`${alert.id}-${idx}`}
@@ -884,7 +949,7 @@ function App() {
                 </div>
               )}
             </div>
-          </div>
+          </DynamicContainer>
         </div>
       </div>
 
@@ -949,48 +1014,64 @@ function App() {
           </div>
         </div>
 
-        {/* Bottom vehicle list */}
-        <div className="h-40 border-t border-slate-800 bg-slate-900 p-4 overflow-x-auto">
+        {/* Bottom vehicle list - Enhanced with FluidGrid */}
+        <div className="h-48 border-t border-slate-800 bg-slate-900 p-4 overflow-hidden">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Активные транспортные средства</h3>
-          <div className="flex gap-3">
-            {simulationState?.vehicles.map(v => (
-              <div
-                key={v.id}
-                onClick={() => setSelectedVehicle(v)}
-                className={clsx(
-                  "flex-shrink-0 w-36 p-3 rounded-xl border cursor-pointer transition-all hover:-translate-y-1",
-                  selectedVehicle?.id === v.id
-                    ? "bg-slate-800 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
-                    : "bg-slate-800/50 border-slate-700 hover:border-slate-600 hover:bg-slate-800",
-                  v.is_attacker && "border-red-500/50 bg-red-500/5"
-                )}
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <div className="font-mono font-bold text-xs">{v.id}</div>
-                  {v.is_attacker && <div className="text-[10px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">ХАКЕР</div>}
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-500">Скорость</span>
-                    <span className="font-mono text-emerald-400">{v.speed.toFixed(0)}</span>
-                  </div>
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-500">Статус</span>
-                    <span className={clsx("font-mono", v.status === 'stopped' ? "text-red-400" : "text-blue-400")}>
-                      {STATUS_RU[v.status] || v.status}
-                    </span>
-                  </div>
-                  {v.defense_level && !v.is_attacker && (
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-slate-500">Защита</span>
-                      <span className={clsx("font-mono", DEFENSE_LEVEL_COLOR[v.defense_level] || 'text-yellow-400')}>
-                        🛡️ {DEFENSE_LEVEL_RU[v.defense_level] || v.defense_level}
-                      </span>
+          <div className="h-[calc(100%-2rem)] overflow-auto custom-scrollbar">
+            <FluidGrid
+              items={simulationState?.vehicles.map((v, index) => ({
+                id: v.id,
+                priority: v.is_attacker ? 1000 : v.trust_score * 10,
+                content: (
+                  <ReactiveCard
+                    reactTo="attack"
+                    delay={index * 50}
+                    className={clsx(
+                      "w-full h-full p-3 transition-all",
+                      selectedVehicle?.id === v.id
+                        ? "ring-2 ring-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                        : "",
+                      v.is_attacker && "border-red-500/50"
+                    )}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="font-mono font-bold text-xs">{v.id}</div>
+                      {v.is_attacker && (
+                        <div className="text-[10px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">
+                          ХАКЕР
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-slate-500">Скорость</span>
+                        <span className="font-mono text-emerald-400">{v.speed.toFixed(0)}</span>
+                      </div>
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-slate-500">Статус</span>
+                        <span className={clsx("font-mono", v.status === 'stopped' ? "text-red-400" : "text-blue-400")}>
+                          {STATUS_RU[v.status] || v.status}
+                        </span>
+                      </div>
+                      {v.defense_level && !v.is_attacker && (
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-slate-500">Защита</span>
+                          <span className={clsx("font-mono", DEFENSE_LEVEL_COLOR[v.defense_level] || 'text-yellow-400')}>
+                            🛡️ {DEFENSE_LEVEL_RU[v.defense_level] || v.defense_level}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </ReactiveCard>
+                )
+              })) || []}
+              columns={6}
+              gap={12}
+              onItemClick={(id) => {
+                const vehicle = simulationState?.vehicles.find(v => v.id === id)
+                setSelectedVehicle(vehicle || null)
+              }}
+            />
           </div>
         </div>
       </div>
@@ -1007,46 +1088,53 @@ function App() {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-800">
-          <button
-            onClick={() => setLogTab('attacks')}
-            className={clsx(
-              "flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors",
-              logTab === 'attacks' ? "border-red-500 text-red-300 bg-red-500/5" : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
-            )}
-          >
-            Атаки ({simulationState?.attack_logs?.length || 0})
-          </button>
-          <button
-            onClick={() => setLogTab('defenses')}
-            className={clsx(
-              "flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors",
-              logTab === 'defenses' ? "border-blue-500 text-blue-300 bg-blue-500/5" : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
-            )}
-          >
-            Защита ({simulationState?.defense_logs?.length || 0})
-          </button>
-          <button
-            onClick={() => setLogTab('outcomes')}
-            className={clsx(
-              "flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors",
-              logTab === 'outcomes' ? "border-emerald-500 text-emerald-300 bg-emerald-500/5" : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
-            )}
-          >
-            Результаты ({simulationState?.outcome_logs?.length || 0})
-          </button>
+        <div className="flex border-b border-slate-800 relative">
+          {(['attacks', 'defenses', 'outcomes'] as const).map((tab) => {
+            const labels = { attacks: 'Атаки', defenses: 'Защита', outcomes: 'Результаты' }
+            const counts = {
+              attacks: simulationState?.attack_logs?.length || 0,
+              defenses: simulationState?.defense_logs?.length || 0,
+              outcomes: simulationState?.outcome_logs?.length || 0,
+            }
+            const activeText = { attacks: 'text-red-300', defenses: 'text-blue-300', outcomes: 'text-emerald-300' }
+            const activeBg = { attacks: 'bg-red-500', defenses: 'bg-blue-500', outcomes: 'bg-emerald-500' }
+            return (
+              <motion.button
+                key={tab}
+                onClick={() => setLogTab(tab)}
+                whileHover={{ backgroundColor: 'rgba(51, 65, 85, 0.5)' }}
+                whileTap={{ scale: 0.97 }}
+                className={clsx(
+                  "relative flex-1 px-3 py-2 text-xs font-medium transition-colors",
+                  logTab === tab ? activeText[tab] : "text-slate-500 hover:text-slate-300"
+                )}
+              >
+                {labels[tab]} ({counts[tab]})
+                {logTab === tab && (
+                  <motion.div
+                    layoutId="activeLogTab"
+                    className={clsx("absolute bottom-0 left-0 right-0 h-0.5", activeBg[tab])}
+                    transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                  />
+                )}
+              </motion.button>
+            )
+          })}
         </div>
 
         {/* Log Content */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+          <AnimatePresence mode="wait">
 
           {/* ===== ATTACKS TAB ===== */}
           {logTab === 'attacks' && (
-            <>
+            <motion.div key="attacks" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.15 }} className="space-y-2">
               {simulationState?.attack_logs && simulationState.attack_logs.length > 0 ? (
-                simulationState.attack_logs.slice().reverse().map((attack) => (
-                  <div
+                simulationState.attack_logs.slice().reverse().map((attack, index) => (
+                  <ReactiveCard
                     key={attack.id}
+                    reactTo="attack"
+                    delay={index * 30}
                     className={clsx(
                       "p-3 rounded-lg border transition-all",
                       attack.status === 'blocked' && "bg-emerald-500/5 border-emerald-500/20",
@@ -1101,7 +1189,7 @@ function App() {
                         {attack.educational_context}
                       </p>
                     </details>
-                  </div>
+                  </ReactiveCard>
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2 py-8">
@@ -1112,12 +1200,12 @@ function App() {
                   </span>
                 </div>
               )}
-            </>
+            </motion.div>
           )}
 
           {/* ===== DEFENSES TAB ===== */}
           {logTab === 'defenses' && (
-            <>
+            <motion.div key="defenses" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.15 }} className="space-y-2">
               {simulationState?.defense_logs && simulationState.defense_logs.length > 0 ? (
                 simulationState.defense_logs.slice().reverse().map((defense) => (
                   <div
@@ -1172,12 +1260,12 @@ function App() {
                   </span>
                 </div>
               )}
-            </>
+            </motion.div>
           )}
 
           {/* ===== OUTCOMES TAB ===== */}
           {logTab === 'outcomes' && (
-            <>
+            <motion.div key="outcomes" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.15 }} className="space-y-2">
               {simulationState?.outcome_logs && simulationState.outcome_logs.length > 0 ? (
                 simulationState.outcome_logs.slice().reverse().map((outcome) => (
                   <div
@@ -1214,8 +1302,9 @@ function App() {
                   </span>
                 </div>
               )}
-            </>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
 
         {/* Stats Footer */}
@@ -1239,6 +1328,7 @@ function App() {
         </div>
       </div>
     </div>
+    </ReactiveOrchestrator>
   )
 }
 

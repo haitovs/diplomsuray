@@ -67,31 +67,54 @@ async def update_vehicle(request: VehicleUpdate):
     return {"status": "updated"}
 
 @app.get("/presets")
-async def get_presets():
+async def get_presets(lang: str = "ru"):
+    presets_i18n = {
+        "normal": {
+            "ru": {"name": "Обычный трафик", "description": "Обычное дорожное движение без атак"},
+            "en": {"name": "Normal Traffic", "description": "Regular traffic flow without attacks"},
+            "tk": {"name": "Adaty hereket", "description": "Hüjümsiz adaty ýol hereketi"},
+        },
+        "heavy": {
+            "ru": {"name": "Интенсивное движение", "description": "Плотный трафик с большим количеством V2V-связей"},
+            "en": {"name": "Heavy Traffic", "description": "Dense traffic with many V2V connections"},
+            "tk": {"name": "Dykyz hereket", "description": "Köp V2V baglanyşykly dykyz hereket"},
+        },
+        "highspeed": {
+            "ru": {"name": "Режим шоссе", "description": "Высокоскоростное движение"},
+            "en": {"name": "Highway Mode", "description": "High-speed traffic"},
+            "tk": {"name": "Ýokary tizlik", "description": "Ýokary tizlikli hereket"},
+        },
+        "attack_demo": {
+            "ru": {"name": "Демо-атака", "description": "Готовый сценарий атаки Сивиллы"},
+            "en": {"name": "Attack Demo", "description": "Ready-made Sybil attack scenario"},
+            "tk": {"name": "Hüjüm demo", "description": "Taýýar Sibil hüjümi ssenariýsi"},
+        },
+    }
+    effective_lang = lang if lang in ("ru", "en", "tk") else "ru"
     return {
         "scenarios": [
             {
                 "id": "normal",
-                "name": "Обычный трафик",
-                "description": "Обычное дорожное движение без атак",
+                "name": presets_i18n["normal"][effective_lang]["name"],
+                "description": presets_i18n["normal"][effective_lang]["description"],
                 "params": {"global_speed_multiplier": 1.0, "detection_sensitivity": 0.7}
             },
             {
                 "id": "heavy",
-                "name": "Интенсивное движение",
-                "description": "Плотный трафик с большим количеством V2V-связей",
+                "name": presets_i18n["heavy"][effective_lang]["name"],
+                "description": presets_i18n["heavy"][effective_lang]["description"],
                 "params": {"global_speed_multiplier": 0.5, "communication_range": 0.008}
             },
             {
                 "id": "highspeed",
-                "name": "Режим шоссе",
-                "description": "Высокоскоростное движение",
+                "name": presets_i18n["highspeed"][effective_lang]["name"],
+                "description": presets_i18n["highspeed"][effective_lang]["description"],
                 "params": {"global_speed_multiplier": 2.0, "detection_sensitivity": 0.5}
             },
             {
                 "id": "attack_demo",
-                "name": "Демо-атака",
-                "description": "Готовый сценарий атаки Сивиллы",
+                "name": presets_i18n["attack_demo"][effective_lang]["name"],
+                "description": presets_i18n["attack_demo"][effective_lang]["description"],
                 "params": {"detection_sensitivity": 0.9},
                 "attack": "sybil"
             }

@@ -396,39 +396,41 @@ class SimulationEngine:
         # E-W streets (west → east): Battery Pl, Morris, Rector, Cortlandt,
         #   Fulton, Vesey, Barclay, Park Pl, Murray
         intersections = {
-            # ── Greenwich St (west column) ──
-            "greenwich_battery":   (40.7028, -74.0135),
-            "greenwich_rector":    (40.7065, -74.0133),
-            "greenwich_cortlandt": (40.7090, -74.0130),
-            "greenwich_fulton":    (40.7107, -74.0120),
-            "greenwich_vesey":     (40.7120, -74.0115),
-            "greenwich_barclay":   (40.7135, -74.0108),
-            "greenwich_murray":    (40.7152, -74.0100),
+            # ── Greenwich St (north-south, western column) ──
+            "greenwich_battery":   (40.7033, -74.0134),
+            "greenwich_rector":    (40.7070, -74.0119),
+            "greenwich_cortlandt": (40.7093, -74.0112),
+            "greenwich_fulton":    (40.7107, -74.0105),
+            "greenwich_vesey":     (40.7118, -74.0100),
+            "greenwich_barclay":   (40.7131, -74.0093),
+            "greenwich_murray":    (40.7147, -74.0085),
 
-            # ── West Broadway / W Broadway (center-west) ──
-            "wbway_rector":        (40.7070, -74.0105),
-            "wbway_cortlandt":     (40.7092, -74.0098),
-            "wbway_fulton":        (40.7110, -74.0090),
-            "wbway_vesey":         (40.7125, -74.0085),
-            "wbway_barclay":       (40.7140, -74.0078),
-            "wbway_murray":        (40.7155, -74.0070),
+            # ── West Broadway (center-west) ──
+            "wbway_rector":        (40.7075, -74.0102),
+            "wbway_cortlandt":     (40.7097, -74.0094),
+            "wbway_fulton":        (40.7113, -74.0087),
+            "wbway_vesey":         (40.7123, -74.0081),
+            "wbway_barclay":       (40.7137, -74.0074),
+            "wbway_murray":        (40.7150, -74.0067),
 
             # ── Church St (center) ──
-            "church_rector":       (40.7075, -74.0075),
-            "church_cortlandt":    (40.7095, -74.0068),
-            "church_fulton":       (40.7112, -74.0058),
-            "church_vesey":        (40.7128, -74.0055),
-            "church_barclay":      (40.7143, -74.0048),
-            "church_murray":       (40.7158, -74.0042),
+            "church_rector":       (40.7080, -74.0082),
+            "church_cortlandt":    (40.7099, -74.0073),
+            "church_fulton":       (40.7115, -74.0065),
+            "church_vesey":        (40.7127, -74.0060),
+            "church_barclay":      (40.7140, -74.0053),
+            "church_murray":       (40.7153, -74.0046),
 
-            # ── Broadway (east column) ──
-            "bway_battery":        (40.7035, -74.0130),
-            "bway_rector":         (40.7080, -74.0060),
-            "bway_cortlandt":      (40.7098, -74.0048),
-            "bway_fulton":         (40.7115, -74.0040),
-            "bway_vesey":          (40.7130, -74.0032),
-            "bway_barclay":        (40.7145, -74.0028),
-            "bway_murray":         (40.7160, -74.0020),
+            # ── Broadway (east column — note Broadway curves) ──
+            "bway_battery":        (40.7042, -74.0133),
+            "bway_morris":         (40.7057, -74.0110),
+            "bway_exchange":       (40.7065, -74.0090),
+            "bway_rector":         (40.7076, -74.0068),
+            "bway_cortlandt":      (40.7098, -74.0058),
+            "bway_fulton":         (40.7117, -74.0050),
+            "bway_vesey":          (40.7128, -74.0040),
+            "bway_barclay":        (40.7143, -74.0033),
+            "bway_murray":         (40.7157, -74.0025),
         }
 
         for nid, (lat, lon) in intersections.items():
@@ -450,8 +452,9 @@ class SimulationEngine:
                 "church_vesey", "church_barclay", "church_murray",
             ],
             "bway": [
-                "bway_battery", "bway_rector", "bway_cortlandt",
-                "bway_fulton", "bway_vesey", "bway_barclay", "bway_murray",
+                "bway_battery", "bway_morris", "bway_exchange", "bway_rector",
+                "bway_cortlandt", "bway_fulton", "bway_vesey", "bway_barclay",
+                "bway_murray",
             ],
         }
 

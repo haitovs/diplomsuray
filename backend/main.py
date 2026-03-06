@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -22,7 +23,7 @@ simulation = SimulationEngine()
 
 # Request models
 class AttackRequest(BaseModel):
-    type: str = None
+    type: Optional[str] = None
     sophistication: str = "medium"  # low, medium, high
 
 class ParamsUpdate(BaseModel):

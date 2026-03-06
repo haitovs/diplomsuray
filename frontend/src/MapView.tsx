@@ -51,31 +51,85 @@ interface MapViewProps {
   lang?: Lang
 }
 
-// ===== VEHICLE ICONS — small, clean, cached =====
-// Defense level encoded as stroke color. No bars = fewer DOM nodes = faster.
-// Smooth movement via CSS transition on .v-car class.
+// ===== VEHICLE ICONS — bold top-down silhouettes for dark map =====
+// Clean shapes with minimal elements — readable at zoom 15-17.
+// Defense = border color. Few SVG nodes = fast rendering.
 
-const FILL: Record<string, string> = { passenger: '#3b82f6', truck: '#10b981', bus: '#f59e0b', emergency: '#a855f7' }
-const DEF_STROKE: Record<string, string> = { high: '#22c55e', medium: '#eab308', low: '#ef4444' }
+const W = 16, H = 22  // base car size
 
 function vehicleSvg(type: string, isHacker: boolean, defLevel: string): string {
+  const dc = defLevel === 'high' ? '#22c55e' : defLevel === 'low' ? '#ef4444' : '#eab308'
+
   if (isHacker) {
-    // Diamond shape — distinct from regular vehicles
-    return `<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,1 13,7 7,13 1,7" fill="#dc2626" stroke="#f87171" stroke-width="1"/><circle cx="7" cy="7" r="2" fill="#1e293b" opacity="0.5"/></svg>`
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<path d="M4,3 Q4,1 6,1 L10,1 Q12,1 12,3 L13,7 L13,17 Q13,20 11,20 L5,20 Q3,20 3,17 L3,7 Z" fill="#991b1b" stroke="#ef4444" stroke-width="1.2"/>
+<rect x="5" y="3" width="6" height="4" rx="1" fill="#450a0a" opacity=".8"/>
+<rect x="5" y="15" width="6" height="3" rx="1" fill="#450a0a" opacity=".7"/>
+<rect x="2" y="5" width="2" height="4" rx=".8" fill="#1c1917"/>
+<rect x="12" y="5" width="2" height="4" rx=".8" fill="#1c1917"/>
+<rect x="2" y="14" width="2" height="4" rx=".8" fill="#1c1917"/>
+<rect x="12" y="14" width="2" height="4" rx=".8" fill="#1c1917"/>
+</svg>`
   }
-  const f = FILL[type] || FILL.passenger
-  const s = DEF_STROKE[defLevel] || DEF_STROKE.medium
+
   if (type === 'truck') {
-    return `<svg width="14" height="9" viewBox="0 0 14 9"><rect x=".5" y=".5" width="13" height="8" rx="2" fill="${f}" stroke="${s}" stroke-width="1"/><line x1="9" y1="1" x2="9" y2="8" stroke="${s}" stroke-width=".5" opacity=".4"/></svg>`
+    const tw = 16, th = 28
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${tw}" height="${th}" viewBox="0 0 ${tw} ${th}">
+<rect x="3" y="11" width="10" height="15" rx="1.5" fill="#059669" stroke="${dc}" stroke-width="1"/>
+<path d="M4,3 Q4,1 6,1 L10,1 Q12,1 12,3 L12,11 L4,11 Z" fill="#10b981" stroke="${dc}" stroke-width="1"/>
+<rect x="5" y="2" width="6" height="4" rx="1" fill="#065f46" opacity=".7"/>
+<rect x="2" y="4" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="12" y="4" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="2" y="14" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="12" y="14" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="2" y="21" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="12" y="21" width="2" height="4" rx=".8" fill="#374151"/>
+</svg>`
   }
+
   if (type === 'bus') {
-    return `<svg width="16" height="8" viewBox="0 0 16 8"><rect x=".5" y=".5" width="15" height="7" rx="3.5" fill="${f}" stroke="${s}" stroke-width="1"/><line x1="5" y1="1" x2="5" y2="7" stroke="${s}" stroke-width=".3" opacity=".3"/><line x1="11" y1="1" x2="11" y2="7" stroke="${s}" stroke-width=".3" opacity=".3"/></svg>`
+    const bw = 14, bh = 30
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${bw}" height="${bh}" viewBox="0 0 ${bw} ${bh}">
+<rect x="3" y="1" width="8" height="28" rx="3.5" fill="#d97706" stroke="${dc}" stroke-width="1"/>
+<rect x="4" y="3" width="6" height="3" rx="1" fill="#92400e" opacity=".65"/>
+<rect x="4" y="8" width="6" height="2.5" rx=".8" fill="#78350f" opacity=".4"/>
+<rect x="4" y="12" width="6" height="2.5" rx=".8" fill="#78350f" opacity=".4"/>
+<rect x="4" y="16" width="6" height="2.5" rx=".8" fill="#78350f" opacity=".4"/>
+<rect x="4" y="20" width="6" height="2.5" rx=".8" fill="#78350f" opacity=".4"/>
+<rect x="4" y="25" width="6" height="2.5" rx="1" fill="#92400e" opacity=".6"/>
+<rect x="1.5" y="5" width="2" height="3.5" rx=".8" fill="#374151"/>
+<rect x="10.5" y="5" width="2" height="3.5" rx=".8" fill="#374151"/>
+<rect x="1.5" y="14" width="2" height="3.5" rx=".8" fill="#374151"/>
+<rect x="10.5" y="14" width="2" height="3.5" rx=".8" fill="#374151"/>
+<rect x="1.5" y="22" width="2" height="3.5" rx=".8" fill="#374151"/>
+<rect x="10.5" y="22" width="2" height="3.5" rx=".8" fill="#374151"/>
+</svg>`
   }
+
   if (type === 'emergency') {
-    return `<svg width="12" height="9" viewBox="0 0 12 9"><rect x=".5" y=".5" width="11" height="8" rx="3" fill="${f}" stroke="${s}" stroke-width="1"/><line x1="6" y1="2" x2="6" y2="7" stroke="#fff" stroke-width="1.2" opacity=".6"/><line x1="3.5" y1="4.5" x2="8.5" y2="4.5" stroke="#fff" stroke-width="1.2" opacity=".6"/></svg>`
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<path d="M4,3 Q4,1 6,1 L10,1 Q12,1 12,3 L13,7 L13,17 Q13,20 11,20 L5,20 Q3,20 3,17 L3,7 Z" fill="#e2e8f0" stroke="${dc}" stroke-width="1"/>
+<rect x="5" y="3" width="6" height="4" rx="1" fill="#94a3b8" opacity=".5"/>
+<rect x="5" y="15" width="6" height="3" rx="1" fill="#94a3b8" opacity=".4"/>
+<rect x="4" y="9" width="3.5" height="2.5" rx=".8" fill="#3b82f6"/>
+<rect x="8.5" y="9" width="3.5" height="2.5" rx=".8" fill="#ef4444"/>
+<rect x="2" y="5" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="12" y="5" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="2" y="14" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="12" y="14" width="2" height="4" rx=".8" fill="#374151"/>
+</svg>`
   }
-  // Passenger car — rounded pill
-  return `<svg width="12" height="9" viewBox="0 0 12 9"><rect x=".5" y=".5" width="11" height="8" rx="4" fill="${f}" stroke="${s}" stroke-width="1"/></svg>`
+
+  // ── Passenger car ── blue body, dark windshield, 4 wheels
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<path d="M4,3 Q4,1 6,1 L10,1 Q12,1 12,3 L13,7 L13,17 Q13,20 11,20 L5,20 Q3,20 3,17 L3,7 Z" fill="#2563eb" stroke="${dc}" stroke-width="1"/>
+<rect x="5" y="3" width="6" height="4" rx="1" fill="#1e3a5f" opacity=".8"/>
+<rect x="5" y="15" width="6" height="3" rx="1" fill="#1e3a5f" opacity=".7"/>
+<rect x="2" y="5" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="12" y="5" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="2" y="14" width="2" height="4" rx=".8" fill="#374151"/>
+<rect x="12" y="14" width="2" height="4" rx=".8" fill="#374151"/>
+</svg>`
 }
 
 // ===== ICON CACHE =====
@@ -90,11 +144,15 @@ function getVehicleIcon(v: Vehicle): L.DivIcon {
 
   const svg = vehicleSvg(v.type, v.is_attacker, defLevel)
 
+  const size: [number, number] =
+    v.type === 'bus'  ? [14, 30] :
+    v.type === 'truck' ? [16, 28] : [W, H]
+
   icon = L.divIcon({
     html: svg,
     className: 'v-car',
-    iconSize: [16, 14],
-    iconAnchor: [8, 7],
+    iconSize: size,
+    iconAnchor: [size[0] / 2, size[1] / 2],
   })
 
   iconCache.set(key, icon)

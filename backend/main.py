@@ -141,13 +141,31 @@ async def load_preset(preset_id: str):
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    sent_metadata = False
     try:
         while True:
             if simulation.is_running:
                 data = simulation.step()
+                # Send heavy metadata only once
+                if not sent_metadata:
+                    sent_metadata = True
+                else:
+                    # Strip heavy static data from per-tick messages
+                    data.pop("available_attacks", None)
+                    data.pop("available_defenses", None)
+                    data.pop("defense_config", None)
                 await websocket.send_json(data)
-                await asyncio.sleep(0.1)  # 10 FPS
+                await asyncio.sleep(0.2)  # 5 FPS — sufficient for simulation
             else:
-                await asyncio.sleep(0.5)
+                # When stopped, still send state so frontend stays in sync
+                data = simulation.get_current_state()
+                if not sent_metadata:
+                    sent_metadata = True
+                else:
+                    data.pop("available_attacks", None)
+                    data.pop("available_defenses", None)
+                    data.pop("defense_config", None)
+                await websocket.send_json(data)
+                await asyncio.sleep(1.0)
     except WebSocketDisconnect:
         print("Client disconnected")

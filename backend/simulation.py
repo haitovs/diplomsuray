@@ -361,12 +361,12 @@ class SimulationEngine:
             "timestamp_validation": {"enabled": True, "strength": 85}
         }
         
-        # Map bounds (approx 2km x 2km)
+        # Map bounds — centered on corrected road network
         self.bounds = {
             "lat_min": 40.7020,
-            "lat_max": 40.7170,
-            "lon_min": -74.0150,
-            "lon_max": -74.0010
+            "lat_max": 40.7160,
+            "lon_min": -74.0165,
+            "lon_max": -74.0040
         }
         
         # Initialize Road Network & Traffic Lights
@@ -396,41 +396,41 @@ class SimulationEngine:
         # E-W streets (west → east): Battery Pl, Morris, Rector, Cortlandt,
         #   Fulton, Vesey, Barclay, Park Pl, Murray
         intersections = {
-            # ── Greenwich St (north-south, western column) ──
-            "greenwich_battery":   (40.7033, -74.0134),
-            "greenwich_rector":    (40.7070, -74.0119),
-            "greenwich_cortlandt": (40.7093, -74.0112),
-            "greenwich_fulton":    (40.7107, -74.0105),
-            "greenwich_vesey":     (40.7118, -74.0100),
-            "greenwich_barclay":   (40.7131, -74.0093),
-            "greenwich_murray":    (40.7147, -74.0085),
+            # ── Greenwich St (western; verified: IRT Rector station 40.7074, -74.0139) ──
+            "greenwich_battery":   (40.7033, -74.0148),
+            "greenwich_rector":    (40.7074, -74.0139),
+            "greenwich_cortlandt": (40.7090, -74.0134),
+            "greenwich_fulton":    (40.7101, -74.0128),
+            "greenwich_vesey":     (40.7113, -74.0122),
+            "greenwich_barclay":   (40.7126, -74.0117),
+            "greenwich_murray":    (40.7139, -74.0112),
 
-            # ── West Broadway (center-west) ──
-            "wbway_rector":        (40.7075, -74.0102),
-            "wbway_cortlandt":     (40.7097, -74.0094),
-            "wbway_fulton":        (40.7113, -74.0087),
-            "wbway_vesey":         (40.7123, -74.0081),
-            "wbway_barclay":       (40.7137, -74.0074),
-            "wbway_murray":        (40.7150, -74.0067),
+            # ── West Broadway / Trinity Place (between Greenwich and Church) ──
+            "wbway_rector":        (40.7073, -74.0136),
+            "wbway_cortlandt":     (40.7090, -74.0128),
+            "wbway_fulton":        (40.7102, -74.0120),
+            "wbway_vesey":         (40.7114, -74.0113),
+            "wbway_barclay":       (40.7127, -74.0107),
+            "wbway_murray":        (40.7140, -74.0101),
 
-            # ── Church St (center) ──
-            "church_rector":       (40.7080, -74.0082),
-            "church_cortlandt":    (40.7099, -74.0073),
-            "church_fulton":       (40.7115, -74.0065),
-            "church_vesey":        (40.7127, -74.0060),
-            "church_barclay":      (40.7140, -74.0053),
-            "church_murray":       (40.7153, -74.0046),
+            # ── Church St (east of WTC; verified: BMT station 40.7072, -74.0133; One Liberty Plaza) ──
+            "church_rector":       (40.7073, -74.0131),
+            "church_cortlandt":    (40.7091, -74.0118),
+            "church_fulton":       (40.7103, -74.0108),
+            "church_vesey":        (40.7115, -74.0100),
+            "church_barclay":      (40.7128, -74.0094),
+            "church_murray":       (40.7141, -74.0088),
 
-            # ── Broadway (east column — note Broadway curves) ──
-            "bway_battery":        (40.7042, -74.0133),
-            "bway_morris":         (40.7057, -74.0110),
-            "bway_exchange":       (40.7065, -74.0090),
-            "bway_rector":         (40.7076, -74.0068),
-            "bway_cortlandt":      (40.7098, -74.0058),
-            "bway_fulton":         (40.7117, -74.0050),
-            "bway_vesey":          (40.7128, -74.0040),
-            "bway_barclay":        (40.7143, -74.0033),
-            "bway_murray":         (40.7157, -74.0025),
+            # ── Broadway (curves east; verified: Trinity Church 40.7081/-74.0122, Fulton Center 40.7105/-74.0089) ──
+            "bway_battery":        (40.7042, -74.0140),
+            "bway_morris":         (40.7055, -74.0134),
+            "bway_exchange":       (40.7063, -74.0128),
+            "bway_rector":         (40.7075, -74.0122),
+            "bway_cortlandt":      (40.7093, -74.0102),
+            "bway_fulton":         (40.7105, -74.0089),
+            "bway_vesey":          (40.7117, -74.0081),
+            "bway_barclay":        (40.7130, -74.0074),
+            "bway_murray":         (40.7143, -74.0067),
         }
 
         for nid, (lat, lon) in intersections.items():

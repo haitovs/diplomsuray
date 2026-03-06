@@ -51,80 +51,53 @@ interface MapViewProps {
   lang?: Lang
 }
 
-// ===== SIMPLE, FAST VEHICLE ICONS =====
-// Key insight: NO heading rotation in icon HTML. Heading changes every tick
-// and would invalidate the cache. Icons are top-down silhouettes that look
-// fine without rotation.
+// ===== VEHICLE ICONS — small, clean, cached =====
+// Defense level encoded as stroke color. No bars = fewer DOM nodes = faster.
+// Smooth movement via CSS transition on .v-car class.
 
-function vehicleSvg(type: string, isHacker: boolean): string {
+const FILL: Record<string, string> = { passenger: '#3b82f6', truck: '#10b981', bus: '#f59e0b', emergency: '#a855f7' }
+const DEF_STROKE: Record<string, string> = { high: '#22c55e', medium: '#eab308', low: '#ef4444' }
+
+function vehicleSvg(type: string, isHacker: boolean, defLevel: string): string {
   if (isHacker) {
-    return `<svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="10" rx="3" fill="#ef4444"/><rect x="5" y="2" width="10" height="6" rx="2" fill="#ef4444"/><circle cx="6" cy="8" r="1.5" fill="#1e293b"/><circle cx="14" cy="8" r="1.5" fill="#1e293b"/></svg>`
+    // Diamond shape — distinct from regular vehicles
+    return `<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,1 13,7 7,13 1,7" fill="#dc2626" stroke="#f87171" stroke-width="1"/><circle cx="7" cy="7" r="2" fill="#1e293b" opacity="0.5"/></svg>`
   }
-  const colors: Record<string, string> = { passenger: '#3b82f6', truck: '#22c55e', bus: '#f97316', emergency: '#a855f7' }
-  const c = colors[type] || '#3b82f6'
+  const f = FILL[type] || FILL.passenger
+  const s = DEF_STROKE[defLevel] || DEF_STROKE.medium
   if (type === 'truck') {
-    return `<svg width="22" height="14" viewBox="0 0 22 14"><rect x="1" y="1" width="15" height="11" rx="2" fill="${c}"/><rect x="16" y="3" width="5" height="9" rx="1" fill="${c}" opacity="0.7"/></svg>`
+    return `<svg width="14" height="9" viewBox="0 0 14 9"><rect x=".5" y=".5" width="13" height="8" rx="2" fill="${f}" stroke="${s}" stroke-width="1"/><line x1="9" y1="1" x2="9" y2="8" stroke="${s}" stroke-width=".5" opacity=".4"/></svg>`
   }
   if (type === 'bus') {
-    return `<svg width="24" height="10" viewBox="0 0 24 10"><rect x="1" y="1" width="22" height="8" rx="3" fill="${c}"/><rect x="3" y="2" width="3" height="2" rx="0.5" fill="#1e293b" opacity="0.3"/><rect x="8" y="2" width="3" height="2" rx="0.5" fill="#1e293b" opacity="0.3"/><rect x="13" y="2" width="3" height="2" rx="0.5" fill="#1e293b" opacity="0.3"/></svg>`
+    return `<svg width="16" height="8" viewBox="0 0 16 8"><rect x=".5" y=".5" width="15" height="7" rx="3.5" fill="${f}" stroke="${s}" stroke-width="1"/><line x1="5" y1="1" x2="5" y2="7" stroke="${s}" stroke-width=".3" opacity=".3"/><line x1="11" y1="1" x2="11" y2="7" stroke="${s}" stroke-width=".3" opacity=".3"/></svg>`
   }
-  // Default: car
-  return `<svg width="18" height="12" viewBox="0 0 18 12"><rect x="1" y="3" width="16" height="7" rx="2.5" fill="${c}"/><rect x="3" y="1" width="10" height="5" rx="1.5" fill="${c}"/></svg>`
+  if (type === 'emergency') {
+    return `<svg width="12" height="9" viewBox="0 0 12 9"><rect x=".5" y=".5" width="11" height="8" rx="3" fill="${f}" stroke="${s}" stroke-width="1"/><line x1="6" y1="2" x2="6" y2="7" stroke="#fff" stroke-width="1.2" opacity=".6"/><line x1="3.5" y1="4.5" x2="8.5" y2="4.5" stroke="#fff" stroke-width="1.2" opacity=".6"/></svg>`
+  }
+  // Passenger car — rounded pill
+  return `<svg width="12" height="9" viewBox="0 0 12 9"><rect x=".5" y=".5" width="11" height="8" rx="4" fill="${f}" stroke="${s}" stroke-width="1"/></svg>`
 }
 
 // ===== ICON CACHE =====
 const iconCache = new Map<string, L.DivIcon>()
 
-function getVehicleIcon(v: Vehicle, isTarget: boolean, hp: number): L.DivIcon {
-  // Cache key: exclude heading (changes every tick), position (not in icon)
+function getVehicleIcon(v: Vehicle): L.DivIcon {
   const defLevel = v.defense_level || 'medium'
-  const hackBucket = v.is_attacker ? Math.round((v.hack_progress || 0) / 10) * 10 : 0
-  const key = `${v.type}|${v.is_attacker}|${v.status}|${defLevel}|${isTarget}|${Math.round(hp / 10) * 10}|${hackBucket}`
+  const key = `${v.type}|${v.is_attacker}|${defLevel}`
 
   let icon = iconCache.get(key)
   if (icon) return icon
 
-  const isHacker = v.is_attacker
-  const isStopped = v.status === 'stopped'
-  const svg = vehicleSvg(v.type, isHacker)
-
-  // Defense arc color
-  const defColor = defLevel === 'high' ? '#22c55e' : defLevel === 'low' ? '#ef4444' : '#eab308'
-  const defWidth = defLevel === 'high' ? '100%' : defLevel === 'medium' ? '66%' : '33%'
-
-  // Hack bar for attacker
-  const hackBar = isHacker && hackBucket > 0
-    ? `<div style="width:30px;height:3px;background:#334155;border-radius:2px;overflow:hidden;margin-bottom:2px"><div style="width:${hackBucket}%;height:100%;background:#ef4444"></div></div>`
-    : ''
-
-  // Target indicator
-  const targetBar = isTarget && hp > 0
-    ? `<div style="width:30px;height:3px;background:#334155;border-radius:2px;overflow:hidden;border:1px solid #ef4444;margin-bottom:2px"><div style="width:${Math.round(hp)}%;height:100%;background:#f87171"></div></div>`
-    : ''
-
-  const stoppedDot = isStopped && !isHacker ? `<div style="width:4px;height:4px;background:#ef4444;border-radius:50%;margin-top:1px"></div>` : ''
-
-  // Defense level bar (non-hackers only)
-  const defBar = !isHacker
-    ? `<div style="width:20px;height:2px;background:#334155;border-radius:1px;overflow:hidden;margin-top:1px"><div style="width:${defWidth};height:100%;background:${defColor}"></div></div>`
-    : ''
-
-  const glow = isHacker ? 'filter:drop-shadow(0 0 3px rgba(239,68,68,0.5));' : ''
-
-  const html = `<div style="display:flex;flex-direction:column;align-items:center;${glow}">${hackBar}${targetBar}${svg}${defBar}${stoppedDot}</div>`
+  const svg = vehicleSvg(v.type, v.is_attacker, defLevel)
 
   icon = L.divIcon({
-    html,
-    className: 'v-marker',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
+    html: svg,
+    className: 'v-car',
+    iconSize: [16, 14],
+    iconAnchor: [8, 7],
   })
 
   iconCache.set(key, icon)
-  if (iconCache.size > 100) {
-    const first = iconCache.keys().next().value
-    if (first !== undefined) iconCache.delete(first)
-  }
   return icon
 }
 
@@ -289,6 +262,7 @@ export default function MapView({ simulationState, selectedVehicle, onSelectVehi
     <div className="w-full h-full relative">
       <style>{`
         .v-marker { background: transparent !important; border: none !important; }
+        .v-car { background: transparent !important; border: none !important; transition: transform 0.25s linear !important; }
         .leaflet-container { background: #0f172a !important; }
         .leaflet-popup-content-wrapper { background: #1e293b !important; color: #e2e8f0 !important; border: 1px solid #334155 !important; border-radius: 8px !important; }
         .leaflet-popup-tip { background: #1e293b !important; }
@@ -297,6 +271,7 @@ export default function MapView({ simulationState, selectedVehicle, onSelectVehi
         .leaflet-control-zoom a:hover { background: #334155 !important; }
         @keyframes dash-flow { to { stroke-dashoffset: -24; } }
         .attack-dash { animation: dash-flow 1s linear infinite; }
+        @keyframes pulse-glow { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }
       `}</style>
 
       <MapContainer center={center} zoom={15} className="w-full h-full" zoomControl={true} ref={mapRef}>
@@ -346,47 +321,44 @@ export default function MapView({ simulationState, selectedVehicle, onSelectVehi
           </>
         )}
 
-        {/* Target rings */}
+        {/* Target rings — small, pulsing */}
         {Array.from(hackByTarget.entries()).map(([tid, p]) => {
           const tv = simulationState.vehicles.find(v => v.id === tid)
           if (!tv) return null
-          return <CircleMarker key={`tr${tid}`} center={[tv.lat, tv.lon]} radius={8 + (p / 100) * 12}
-            pathOptions={{ color: '#ef4444', weight: 1.5, fillOpacity: 0.03, opacity: 0.3 + (p / 100) * 0.5 }} />
+          return <CircleMarker key={`tr${tid}`} center={[tv.lat, tv.lon]} radius={6 + (p / 100) * 6}
+            pathOptions={{ color: '#ef4444', weight: 1, fillOpacity: 0.05, opacity: 0.3 + (p / 100) * 0.4 }} />
         })}
 
         {/* Sybil ghosts */}
         {ghosts.map((pos, i) => (
-          <CircleMarker key={`g${i}`} center={pos} radius={5}
-            pathOptions={{ color: '#ef4444', weight: 1, fillColor: '#ef4444', fillOpacity: 0.15, opacity: 0.3, dashArray: '3 3' }} />
+          <CircleMarker key={`g${i}`} center={pos} radius={4}
+            pathOptions={{ color: '#ef4444', weight: 1, fillColor: '#ef4444', fillOpacity: 0.12, opacity: 0.25, dashArray: '3 3' }} />
         ))}
 
-        {/* Vehicles */}
+        {/* Vehicles — small clean icons with CSS-smoothed movement */}
         {simulationState.vehicles.map(v => {
-          const isTarget = hackByTarget.has(v.id)
           const hp = hackByTarget.get(v.id) || 0
           return (
-            <Marker key={v.id} position={[v.lat, v.lon]} icon={getVehicleIcon(v, isTarget, hp)}
+            <Marker key={v.id} position={[v.lat, v.lon]} icon={getVehicleIcon(v)}
               eventHandlers={{ click: () => onSelectVehicle(selectedVehicle?.id === v.id ? null : v) }}>
               <Popup>
-                <div style={{ minWidth: 150 }}>
-                  <strong style={{ fontSize: 12 }}>{v.name || v.id}</strong>
-                  {v.name && <span style={{ fontSize: 9, color: '#94a3b8', marginLeft: 4, fontFamily: 'monospace' }}>{v.id}</span>}
+                <div style={{ minWidth: 140 }}>
+                  <strong style={{ fontSize: 11 }}>{v.name || v.id}</strong>
                   <br />
-                  <span style={{ color: v.status === 'moving' ? '#22c55e' : '#ef4444', fontSize: 11 }}>
+                  <span style={{ color: v.status === 'moving' ? '#22c55e' : '#ef4444', fontSize: 10 }}>
                     {v.status === 'moving' ? t('map.inMotion') : t('map.stoppedLabel')}
                   </span>
-                  <br />
-                  <span style={{ fontSize: 11 }}>{t('map.speed')} {v.speed?.toFixed(0)} {t('vehicle.kmh')}</span>
+                  <span style={{ fontSize: 10, marginLeft: 6 }}>{v.speed?.toFixed(0)} {t('vehicle.kmh')}</span>
                   {v.defense_level && !v.is_attacker && (
-                    <><br /><span style={{ fontSize: 11, color: v.defense_level === 'high' ? '#22c55e' : v.defense_level === 'low' ? '#ef4444' : '#eab308' }}>
-                      {t('map.defense')} {t(`defense.${v.defense_level}`)}
+                    <><br /><span style={{ fontSize: 10, color: v.defense_level === 'high' ? '#22c55e' : v.defense_level === 'low' ? '#ef4444' : '#eab308' }}>
+                      {t(`defense.${v.defense_level}`)}
                     </span></>
                   )}
                   {v.is_attacker && (v.hack_progress || 0) > 0 && (
-                    <><br /><span style={{ color: '#ef4444', fontSize: 11 }}>{t('map.hackProgress')} {Math.round(v.hack_progress || 0)}%</span></>
+                    <><br /><span style={{ color: '#ef4444', fontSize: 10 }}>{t('map.hackProgress')} {Math.round(v.hack_progress || 0)}%</span></>
                   )}
-                  {isTarget && hp > 0 && (
-                    <><br /><span style={{ color: '#f87171', fontWeight: 'bold', fontSize: 11 }}>{t('map.targetProgress')} {Math.round(hp)}%</span></>
+                  {hp > 0 && (
+                    <><br /><span style={{ color: '#f87171', fontWeight: 'bold', fontSize: 10 }}>{t('map.targetProgress')} {Math.round(hp)}%</span></>
                   )}
                 </div>
               </Popup>

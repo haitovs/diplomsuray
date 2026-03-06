@@ -126,7 +126,7 @@ function App() {
           throttleRef.current = setTimeout(() => {
             if (latestRef.current) setSim(latestRef.current)
             throttleRef.current = null
-          }, 400) // 2.5 updates/sec max
+          }, 250) // 4 updates/sec — matches CSS transition duration
         }
       } catch {}
     }

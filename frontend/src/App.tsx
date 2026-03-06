@@ -55,7 +55,7 @@ const API_BASE = `${window.location.origin}/api`
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws`
 
 const VEHICLE_ICON: Record<string, string> = {
-  passenger: '\u{1F697}', truck: '\u{1F69B}', bus: '\u{1F68C}', emergency: '\u{1F691}', hacker: '\u{1F480}',
+  passenger: '🚗', truck: '🚛', bus: '🚌', emergency: '🚑', hacker: '💀',
 }
 
 const ATTACK_I18N: Record<string, string> = {
@@ -354,18 +354,15 @@ function App() {
             </div>
 
             <div className="space-y-2">
-              {/* Sybil */}
-              <AttackCard name={t('attacks.sybil')} desc={t('attacks.sybilDesc')} icon="\u{1F3AD}" color="red"
+              <AttackCard name={t('attacks.sybil')} desc={t('attacks.sybilDesc')} icon="🎭" color="red"
                 expanded={expandedAttack === 'sybil'} onExpand={() => setExpandedAttack(expandedAttack === 'sybil' ? null : 'sybil')}
                 onLaunch={() => attack('sybil')} t={t} learnContent={t('attackInfo.sybil.whatIsIt')} learnDetail={t('attackInfo.sybil.howItWorks')} />
 
-              {/* Replay */}
-              <AttackCard name={t('attacks.replay')} desc={t('attacks.replayDesc')} icon="\u{1F501}" color="orange"
+              <AttackCard name={t('attacks.replay')} desc={t('attacks.replayDesc')} icon="🔁" color="orange"
                 expanded={expandedAttack === 'replay'} onExpand={() => setExpandedAttack(expandedAttack === 'replay' ? null : 'replay')}
                 onLaunch={() => attack('replay')} t={t} learnContent={t('attackInfo.replay.whatIsIt')} learnDetail={t('attackInfo.replay.howItWorks')} />
 
-              {/* Bogus */}
-              <AttackCard name={t('attacks.bogus')} desc={t('attacks.bogusDesc')} icon="\u{1F4E1}" color="yellow"
+              <AttackCard name={t('attacks.bogus')} desc={t('attacks.bogusDesc')} icon="📡" color="yellow"
                 expanded={expandedAttack === 'bogus'} onExpand={() => setExpandedAttack(expandedAttack === 'bogus' ? null : 'bogus')}
                 onLaunch={() => attack('bogus')} t={t} learnContent={t('attackInfo.bogus.whatIsIt')} learnDetail={t('attackInfo.bogus.howItWorks')} />
 
@@ -513,56 +510,129 @@ function App() {
           })}
         </div>
 
-        {/* Log content */}
+        {/* Log content — clickable entries with educational detail */}
         <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
           {logTab === 'attacks' && (sim?.attack_logs?.length ? (
-            sim.attack_logs.slice().reverse().map(a => (
-              <div key={a.id} className={clsx("p-2.5 rounded-lg border text-[11px]",
-                a.status === 'blocked' ? "bg-emerald-500/5 border-emerald-500/20" : a.status === 'succeeded' ? "bg-red-500/10 border-red-500/30" : "bg-yellow-500/5 border-yellow-400/30")}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span>{a.icon}</span>
-                  <span className="font-bold text-white flex-1 truncate">{metadataRef.current.available_attacks?.[a.attack_type]?.name || a.attack_type}</span>
-                  <span className={clsx("text-[9px] font-bold px-1.5 py-0.5 rounded",
-                    a.status === 'blocked' ? "bg-emerald-500/20 text-emerald-300" : a.status === 'succeeded' ? "bg-red-500/20 text-red-300" : "bg-yellow-500/20 text-yellow-300")}>
-                    {a.status === 'blocked' ? t('log.blocked') : a.status === 'succeeded' ? t('log.succeeded') : t('log.active')}
-                  </span>
-                </div>
-                <p className="text-slate-400 leading-relaxed">{a.description}</p>
-                <details className="mt-1"><summary className="text-[9px] text-emerald-400 cursor-pointer">{t('log.moreDetails')}</summary>
-                  <p className="text-[9px] text-slate-400 mt-1 pl-2">{a.educational_context}</p></details>
-              </div>
-            ))
+            sim.attack_logs.slice().reverse().map(a => {
+              const attackerV = sim.vehicles.find(v => v.id === a.attacker_id)
+              const targetVs = a.target_ids.map(tid => sim.vehicles.find(v => v.id === tid)).filter(Boolean) as Vehicle[]
+              const atkKey = ATTACK_I18N[a.attack_type]
+              return (
+                <details key={a.id} className={clsx("rounded-lg border text-[11px] group",
+                  a.status === 'blocked' ? "bg-emerald-500/5 border-emerald-500/20" : a.status === 'succeeded' ? "bg-red-500/10 border-red-500/30" : "bg-yellow-500/5 border-yellow-400/30")}>
+                  <summary className="p-2.5 cursor-pointer select-none list-none">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span>{a.icon}</span>
+                      <span className="font-bold text-white flex-1 truncate">{metadataRef.current.available_attacks?.[a.attack_type]?.name || a.attack_type}</span>
+                      <span className={clsx("text-[9px] font-bold px-1.5 py-0.5 rounded",
+                        a.status === 'blocked' ? "bg-emerald-500/20 text-emerald-300" : a.status === 'succeeded' ? "bg-red-500/20 text-red-300" : "bg-yellow-500/20 text-yellow-300")}>
+                        {a.status === 'blocked' ? t('log.blocked') : a.status === 'succeeded' ? t('log.succeeded') : t('log.active')}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 text-[10px] text-slate-500">
+                      {attackerV && <span>💀 {vName(attackerV)}</span>}
+                      {targetVs.length > 0 && <span>🎯 {targetVs.map(v => vName(v)).join(', ')}</span>}
+                    </div>
+                  </summary>
+                  <div className="px-2.5 pb-2.5 space-y-2 border-t border-slate-700/50 pt-2">
+                    <p className="text-slate-400 leading-relaxed">{a.description}</p>
+                    <div className="flex gap-2 text-[10px]">
+                      <span className="text-slate-500">{t('log.bypass')}: <span className="text-yellow-400">{Math.round(a.attack_data.bypass_chance * 100)}%</span></span>
+                      <span className="text-slate-500">{a.attack_data.sophistication_desc}</span>
+                    </div>
+                    {atkKey && (
+                      <div className="bg-slate-800/60 rounded p-2 space-y-1.5">
+                        <div className="text-[10px] font-bold text-cyan-400">{t('lesson.whatIsIt')}</div>
+                        <p className="text-[10px] text-slate-400">{t(`attackInfo.${atkKey}.whatIsIt`)}</p>
+                        <div className="text-[10px] font-bold text-cyan-400">{t('lesson.howItWorks')}</div>
+                        <p className="text-[10px] text-slate-400">{t(`attackInfo.${atkKey}.howItWorks`)}</p>
+                        <div className="text-[10px] font-bold text-orange-400">{t('lesson.realWorldParallel')}</div>
+                        <p className="text-[10px] text-slate-400">{t(`attackInfo.${atkKey}.realWorldUsage`)}</p>
+                      </div>
+                    )}
+                    {a.educational_context && <p className="text-[9px] text-slate-500 italic">{a.educational_context}</p>}
+                  </div>
+                </details>
+              )
+            })
           ) : <Empty icon={<AlertTriangle className="w-6 h-6 opacity-20" />} text={t('log.noAttacks')} sub={t('log.launchAttack')} />)}
 
           {logTab === 'defenses' && (sim?.defense_logs?.length ? (
-            sim.defense_logs.slice().reverse().map(d => (
-              <div key={d.id} className={clsx("p-2.5 rounded-lg border text-[11px]",
-                d.success ? "bg-blue-500/5 border-blue-500/20" : "bg-red-500/5 border-red-500/20")}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span>{d.icon}</span>
-                  <span className="font-bold text-white flex-1 truncate">{metadataRef.current.available_defenses?.[d.defense_type]?.name || d.defense_type}</span>
-                  <span className={clsx("text-[9px] font-bold", d.success ? "text-emerald-400" : "text-red-400")}>{d.success ? t('log.success') : t('log.failure')}</span>
-                </div>
-                <p className="text-slate-400">{d.action_taken}</p>
-              </div>
-            ))
+            sim.defense_logs.slice().reverse().map(d => {
+              const attackerV = sim.vehicles.find(v => v.id === d.attacker_id)
+              const defKey = d.defense_type
+              const defMeta = metadataRef.current.available_defenses?.[defKey]
+              // Find matching i18n key for defense info
+              const defI18n = defKey === 'ids' ? 'ids' : defKey === 'pki' ? 'pki' : defKey === 'misbehavior_detection' ? 'misbehavior' : defKey === 'trust_scoring' ? 'trust'
+                : defKey === 'rate_limiting' ? 'ids' : defKey === 'cooperative_verification' ? 'trust' : defKey === 'signature_verification' ? 'pki' : 'ids'
+              return (
+                <details key={d.id} className={clsx("rounded-lg border text-[11px] group",
+                  d.success ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20")}>
+                  <summary className="p-2.5 cursor-pointer select-none list-none">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span>{d.icon}</span>
+                      <span className="font-bold text-white flex-1 truncate">{defMeta?.name || d.defense_type}</span>
+                      <span className={clsx("text-[9px] font-bold px-1.5 py-0.5 rounded",
+                        d.success ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300")}>
+                        {d.success ? t('log.success') : t('log.failure')}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 text-[10px] text-slate-500">
+                      {attackerV && <span>💀 {t('log.attacker')}: {vName(attackerV)}</span>}
+                      <span>{t('log.confidence')}: {Math.round(d.confidence * 100)}%</span>
+                      <span>{t('log.time')}: {d.detection_time}ms</span>
+                    </div>
+                  </summary>
+                  <div className="px-2.5 pb-2.5 space-y-2 border-t border-slate-700/50 pt-2">
+                    <p className="text-slate-400">{d.action_taken}</p>
+                    <p className="text-slate-400">{d.explanation}</p>
+                    <div className="bg-slate-800/60 rounded p-2 space-y-1.5">
+                      <div className="text-[10px] font-bold text-cyan-400">{t('lesson.whatIsIt')}</div>
+                      <p className="text-[10px] text-slate-400">{t(`defenseInfo.${defI18n}.whatIsIt`)}</p>
+                      <div className="text-[10px] font-bold text-cyan-400">{t('lesson.howItWorks')}</div>
+                      <p className="text-[10px] text-slate-400">{t(`defenseInfo.${defI18n}.howItDetects`)}</p>
+                      <div className="text-[10px] font-bold text-emerald-400">{t('lesson.realWorldParallel')}</div>
+                      <p className="text-[10px] text-slate-400">{t(`defenseInfo.${defI18n}.realDeployment`)}</p>
+                    </div>
+                  </div>
+                </details>
+              )
+            })
           ) : <Empty icon={<Shield className="w-6 h-6 opacity-20" />} text={t('log.noDefenses')} />)}
 
           {logTab === 'outcomes' && (sim?.outcome_logs?.length ? (
             sim.outcome_logs.slice().reverse().map(o => (
-              <div key={o.id} className={clsx("p-2.5 rounded-lg border text-[11px]",
+              <details key={o.id} className={clsx("rounded-lg border text-[11px] group",
                 o.result === 'blocked' ? "bg-emerald-500/10 border-emerald-500/30" : "bg-red-500/10 border-red-500/30")}>
-                <div className="font-bold mb-1">
-                  <span className={o.result === 'blocked' ? "text-emerald-400" : "text-red-400"}>
-                    {o.result === 'blocked' ? t('log.attackBlocked') : t('log.attackPassed')}
-                  </span>
+                <summary className="p-2.5 cursor-pointer select-none list-none">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-base">{o.result === 'blocked' ? '🛡️' : '💥'}</span>
+                    <span className={clsx("font-bold flex-1", o.result === 'blocked' ? "text-emerald-400" : "text-red-400")}>
+                      {o.result === 'blocked' ? t('log.attackBlocked') : t('log.attackPassed')}
+                    </span>
+                    <span className="text-[9px] text-slate-500">{o.defenses_triggered} {t('log.defensesCount')}</span>
+                  </div>
+                  <p className="text-slate-400 text-[10px]">{o.impact_description}</p>
+                </summary>
+                <div className="px-2.5 pb-2.5 space-y-2 border-t border-slate-700/50 pt-2">
+                  <div className="bg-slate-800/60 rounded p-2">
+                    <div className="text-[10px] font-bold text-emerald-400 mb-1">{t('log.conclusion')}</div>
+                    <p className="text-[10px] text-slate-400">{o.learning_points}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                    <div className="bg-slate-800/40 rounded p-1.5 text-center">
+                      <div className="text-emerald-400 font-bold">{o.defenses_triggered}</div>
+                      <div className="text-slate-500">{t('logStats.blocked')}</div>
+                    </div>
+                    <div className="bg-slate-800/40 rounded p-1.5 text-center">
+                      <div className={o.attack_succeeded ? "text-red-400 font-bold" : "text-emerald-400 font-bold"}>
+                        {o.attack_succeeded ? t('log.succeeded') : t('log.blocked')}
+                      </div>
+                      <div className="text-slate-500">{t('log.result')}</div>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-slate-400 mb-1">{o.impact_description}</p>
-                <div className="bg-slate-800/50 p-1.5 rounded text-[9px]">
-                  <div className="text-emerald-400 font-bold">{t('log.conclusion')}</div>
-                  <div className="text-slate-400">{o.learning_points}</div>
-                </div>
-              </div>
+              </details>
             ))
           ) : <Empty icon={<Activity className="w-6 h-6 opacity-20" />} text={t('log.noOutcomes')} />)}
         </div>
@@ -687,15 +757,18 @@ function AttackCard({ name, desc, icon, color, expanded, onExpand, onLaunch, t, 
   onExpand: () => void; onLaunch: () => void; t: (k: string) => string
   learnContent: string; learnDetail: string
 }) {
+  const bg = color === 'red' ? 'bg-red-500/10 border-red-500/20' : color === 'orange' ? 'bg-orange-500/10 border-orange-500/20' : 'bg-yellow-500/10 border-yellow-500/20'
+  const btnBg = color === 'red' ? 'bg-red-600/30 hover:bg-red-600/50 border-red-500/30 text-red-200' : color === 'orange' ? 'bg-orange-600/30 hover:bg-orange-600/50 border-orange-500/30 text-orange-200' : 'bg-yellow-600/30 hover:bg-yellow-600/50 border-yellow-500/30 text-yellow-200'
+  const borderExp = color === 'red' ? 'border-red-500/10' : color === 'orange' ? 'border-orange-500/10' : 'border-yellow-500/10'
   return (
-    <div className={`bg-${color}-500/10 border border-${color}-500/20 rounded-lg overflow-hidden`}>
+    <div className={`${bg} border rounded-lg overflow-hidden`}>
       <div className="p-2 text-xs">
         <div className="font-bold text-slate-200 mb-0.5">{icon} {name}</div>
         <div className="text-[10px] text-slate-400 mb-1.5">{desc}</div>
         <div className="flex items-center gap-2">
           <button onClick={onLaunch}
-            className={`px-2.5 py-1 bg-${color}-600/30 hover:bg-${color}-600/50 border border-${color}-500/30 rounded text-[10px] font-bold text-${color}-200 transition-colors`}>
-            Launch
+            className={`px-2.5 py-1 ${btnBg} border rounded text-[10px] font-bold transition-colors`}>
+            {t('attacks.launch')}
           </button>
           <button onClick={onExpand}
             className="px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1">
@@ -704,7 +777,7 @@ function AttackCard({ name, desc, icon, color, expanded, onExpand, onLaunch, t, 
         </div>
       </div>
       {expanded && (
-        <div className={`px-2 pb-2 text-[10px] text-slate-400 space-y-1 border-t border-${color}-500/10 pt-1.5`}>
+        <div className={`px-2 pb-2 text-[10px] text-slate-400 space-y-1 border-t ${borderExp} pt-1.5`}>
           <p>{learnContent}</p>
           <p className="text-slate-500">{learnDetail}</p>
         </div>

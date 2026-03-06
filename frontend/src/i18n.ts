@@ -196,6 +196,11 @@ const translations: Translations = {
     en: 'Position falsification',
     tk: 'Ýerleşişi galplaşdyrmak',
   },
+  'attacks.launch': {
+    ru: 'Запустить',
+    en: 'Launch',
+    tk: 'Başla',
+  },
   'attacks.stop': {
     ru: 'Остановить атаку',
     en: 'Stop Attack',
@@ -553,6 +558,16 @@ const translations: Translations = {
     ru: 'Результатов пока нет',
     en: 'No results yet',
     tk: 'Netije entek ýok',
+  },
+  'log.attacker': {
+    ru: 'Атакующий',
+    en: 'Attacker',
+    tk: 'Hüjümçi',
+  },
+  'log.result': {
+    ru: 'Результат',
+    en: 'Result',
+    tk: 'Netije',
   },
 
   // ===== LOG FOOTER STATS =====
